@@ -1,0 +1,43 @@
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 10px;
+}
+.navbar{
+    border-bottom: 1px solid #979797;
+}
+.redditLogo{
+    color: rgb(255, 51, 0);
+    font-size: 30px;
+    font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+    margin-left: 20px;
+}
+.navSearch {
+  width: 450px;          /* make it wider */
+  padding: 8px 14px;     /* inner spacing */
+  background-color: #dbe1e7;
+  border: 1px solid #ddd;
+  border-radius: 20px;   /* rounded edges */
+  outline: none;
+}
+
+.navSearch:focus {
+  border-color: #a0a0a0; /* subtle focus border */
+}
+.loginBtn {
+  background-color: #ff4500;
+  color: white;
+  padding: 6px 18px;
+  border: none;
+  border-radius: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  margin-right: 20px;
+}
+
+.loginBtn:hover {
+  background-color: #e03d00; /* slightly darker */
+}
