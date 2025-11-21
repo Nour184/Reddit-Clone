@@ -1,0 +1,121 @@
+/* Overlay */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+/* Card */
+.login-card {
+  width: 420px;
+  background: #ffffff;        /* WHITE */
+  padding: 12px;
+  border-radius: 16px;
+  color: #1a1a1b;             /* dark text */
+  text-align: center;
+  border: 1px solid #e5e5e5;  /* light border */
+}
+
+.title {
+  font-size: 22px;
+  font-weight: bold;
+  margin-bottom: 16px;
+  color: #1a1a1b;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: #555;                /* light gray text */
+  margin-bottom: 20px;
+}
+
+.subtitle1 {
+  text-align: left;
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 20px;
+}
+
+.subtitle span,
+.subtitle1 span {
+  color: #3b82f6;             
+  cursor: pointer;
+}
+
+/* Buttons */
+.button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.login-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 999px;
+  font-size: 14px;
+  border: 1px solid #ddd;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.login-btn:hover {
+  background: #f0f0f0;
+}
+
+/* Divider */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.divider div {
+  flex: 1;
+  height: 1px;
+  background: #ddd;
+}
+
+.divider span {
+  color: #777;
+  font-size: 12px;
+}
+
+/* Form */
+.form input {
+  width: 100%;
+  padding: 12px;
+  background: #f7f7f7;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #1a1a1b;
+  margin-bottom: 12px;
+}
+
+.form input:focus {
+  border-color: #3b82f6;
+  background: #fff;
+}
+
+/* Submit button */
+.submit-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 999px;
+  background: #ff4500;      /* Reddit orange */
+  color: white;
+  font-size: 15px;
+  border: none;
+  cursor: pointer;
+}
+
+.submit-btn:hover {
+  background: #e03d00;      /* darker orange */
+}
