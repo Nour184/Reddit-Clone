@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      // Defines the alias @services to point to the actual services folder
+      "@services/*": ["./services/*"], 
+      // It's also helpful to alias the components and app folders
+      "@/components/*": ["./app/components/*"], 
+      "@/app/*": ["./app/*"] 
+    }
+  },
+  "include": ["app/**/*", "services/**/*"]
+}
