@@ -35,6 +35,56 @@ export const mockData = {
       description: 'Get help with your school and personal projects.',
       communityPhotoLink: 'https://picsum.photos/200/100?comm=help',
     },
+    {
+      name: 'r/ReactJS',
+      description: 'A community for learning and sharing everything React.',
+      communityPhotoLink: 'https://picsum.photos/200/100?comm=react',
+    },
+    {
+      name: 'r/WebDev',
+      description: 'General web development discussion and news.',
+      communityPhotoLink: 'https://picsum.photos/200/100?comm=web',
+    },
+    {
+      name: 'r/Frontend',
+      description: 'Focusing on HTML, CSS, and JavaScript for the browser.',
+      communityPhotoLink: 'https://picsum.photos/200/100?comm=front',
+    },
+    {
+      name: 'r/Backend',
+      description: 'Server-side programming, databases, and architecture.',
+      communityPhotoLink: 'https://picsum.photos/200/100?comm=back',
+    },
+    {
+      name: 'r/FullStack',
+      description: 'For developers who do it all.',
+      communityPhotoLink: 'https://picsum.photos/200/100?comm=full',
+    },
+    {
+      name: 'r/UIUX',
+      description: 'User Interface and User Experience design discussions.',
+      communityPhotoLink: 'https://picsum.photos/200/100?comm=uiux',
+    },
+    {
+      name: 'r/CodingMemes',
+      description: 'Relatable memes for programmers.',
+      communityPhotoLink: 'https://picsum.photos/200/100?comm=memes',
+    },
+    {
+      name: 'r/LearnProgramming',
+      description: 'Resources and support for beginners.',
+      communityPhotoLink: 'https://picsum.photos/200/100?comm=learn',
+    },
+    {
+      name: 'r/TechNews',
+      description: 'Latest updates from the tech world.',
+      communityPhotoLink: 'https://picsum.photos/200/100?comm=news',
+    },
+    {
+      name: 'r/OpenSource',
+      description: 'Discussing and contributing to open source software.',
+      communityPhotoLink: 'https://picsum.photos/200/100?comm=os',
+    },
   ],
 
   // --- CONTENT ENTITIES ---
@@ -102,7 +152,7 @@ export const mockData = {
   CommentDownvotes: [
     { userEmail: 'bob@user.com', commentID: 'comm-503' }, // Bob downvotes Admin's comment
   ],
-  
+
   JoinedCommunities: [
     { userEmail: 'alice@user.com', communityName: 'r/NextjsDevs' },
     { userEmail: 'alice@user.com', communityName: 'r/ProjectHelp' },
