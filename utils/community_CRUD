@@ -1,0 +1,33 @@
+import { Pool } from "pg";
+
+
+export const pool = new Pool({
+   user: "postgres",
+  host: "localhost",
+  database: "postgres",
+  password: "12345678",
+  port: 5432,
+});
+
+
+
+
+// =============================
+// CREATE Community
+// =============================
+export async function createCommunity(
+  name: string,
+  description: string,
+  photo: string | null,
+  ownerEmail: string
+) {
+  const query = `
+    INSERT INTO communities (name, description, community_photo_link, community_owner)
+    VALUES ($1, $2, $3, $4)
+    RETURNING *;
+  `;
+  const values = [name, description, photo, ownerEmail];
+
+  const result = await pool.query(query, values);
+  return result.rows[0];
+}
