@@ -22,4 +22,16 @@ export interface User {
     created_on: Date;
 }
 
+// Post data
+export interface Post {
+    post_id: number,
+    user_email: string,
+    community_name: string,
+    email: string;
+    title: string;
+    body?: string | null;
+    picture_link?: string | null;
+    created_on: Date;
+}
+
 export default pool
