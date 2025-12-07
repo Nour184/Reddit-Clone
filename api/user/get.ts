@@ -20,9 +20,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     } catch (err : unknown) {
         if (err instanceof Error) {
-            res.status(500).json('Error creating user:' + err.message);
+            res.status(500).json('Error fetching user:' + err.message);
         } else {
-            res.status(500).json('Error creating user:' + err);
+            res.status(500).json('Error fetching user:' + err);
         }
     }
 }
