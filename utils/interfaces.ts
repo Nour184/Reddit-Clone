@@ -27,10 +27,17 @@ export interface Post {
     post_id: number,
     user_email: string,
     community_name: string,
-    email: string;
     title: string;
     body?: string | null;
     picture_link?: string | null;
+    created_on: Date;
+}
+
+// Comment data
+export interface Comment {
+    comment_id: number,
+    user_email: string,
+    body: string;
     created_on: Date;
 }
 
