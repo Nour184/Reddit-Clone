@@ -102,3 +102,23 @@ export async function VotePost(
         throw err;
     }
 }
+
+/**
+ * Gets the total votes on a post
+ *
+ * @param post_id - The post to get the votes of.
+ */
+export async function GetPostVotes(
+    post_id: number
+): Promise<number> {
+    try {
+        const result = await pool.query(
+            "SELECT get_post_votes($1)",
+            [post_id]
+        );
+        return result.rows[0] ?? null;
+    } catch (err) {
+        console.error("Error getting post votes:", err);
+        throw err;
+    }
+}
