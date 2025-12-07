@@ -31,9 +31,15 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT post_id, user_email, community_name, title, body, picture_link, created_on
-    FROM posts
-    WHERE post_id = p_post_id;
+    SELECT p.post_id,
+           p.user_email,
+           p.community_name,
+           p.title,
+           p.body,
+           p.picture_link,
+           p.created_on
+    FROM posts p
+    WHERE p.post_id = p_post_id;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -49,9 +55,9 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT post_id, user_email, community_name, title, body, picture_link, created_on
-    FROM posts
-    WHERE community_name = p_community_name
+    SELECT p.post_id, p.user_email, p.community_name, p.title, p.body, p.picture_link, p.created_on
+    FROM posts p
+    WHERE p.community_name = p_community_name
     ORDER BY created_on DESC;
 END;
 $$ LANGUAGE plpgsql;

@@ -116,7 +116,7 @@ export async function GetPostVotes(
             "SELECT get_post_votes($1)",
             [post_id]
         );
-        return result.rows[0] ?? null;
+        return result.rows[0].get_post_votes ?? 0;
     } catch (err) {
         console.error("Error getting post votes:", err);
         throw err;

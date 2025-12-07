@@ -14,20 +14,6 @@
 //     ('Physics', 'Physics community', 'admin@example.com');
 
 
-import { Pool } from "pg";
-
-const pool = new Pool({
-    user: 'neondb_owner',
-    host: 'ep-cool-pond-ag6dlbgu-pooler.c-2.eu-central-1.aws.neon.tech',
-    database: 'neondb',
-    password: 'npg_ohLxKP8CJR9U',
-    port: 5432,
-    ssl: {
-        rejectUnauthorized: false
-    }
-});
-
-
 
 import {
     joinCommunity,
@@ -36,6 +22,7 @@ import {
     updateJoinedCommunity,
     leaveCommunity,
 } from "../utils/joined_communities_CRUD";
+import pool from "../utils/interfaces";
 
 async function testJoinedCommunities() {
     console.log("\n🔵 Testing joined_communities...");

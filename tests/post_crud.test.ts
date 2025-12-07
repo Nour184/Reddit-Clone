@@ -1,4 +1,3 @@
-import pool from '../utils/user_crud';
 import {
     CreatePost,
     GetPost,
@@ -7,11 +6,13 @@ import {
     GetPostVotes,
     DeletePost
 } from '../utils/post_crud';
-import {Post} from "../utils/interfaces";
+import pool, {Post} from "../utils/interfaces";
+import {createCommunity, deleteCommunity} from "../utils/community_crud";
+import {CreateUser, DeleteUser} from "../utils/user_crud";
 
 describe('Post Service', () => {
     const testEmail = 'JohnDoe@example.com';
-    const testCommunity = 'place';
+    const testCommunity = 'TestCommunity';
     const testTitle = 'I love Reddit!';
     const testBody = 'It is very cool';
     const testPictureLink = 'https://example.com/pfp.png';
@@ -21,10 +22,20 @@ describe('Post Service', () => {
     // Cleanup after all tests are done
     afterAll(async () => {
         await DeletePost(createdPostIdOne).catch(() => {});
+        await deleteCommunity(testCommunity).catch(() => {});
+        await DeleteUser(testEmail).catch(() => {});
         await pool.end();
     });
 
     it('should create a post', async () => {
+        await CreateUser(testEmail, "Owner", "Password");
+        await createCommunity(
+            testCommunity,
+            testBody,
+            testPictureLink,
+            testEmail
+        );
+
         createdPostIdOne = await CreatePost(testEmail, testCommunity, testTitle, testBody, testPictureLink);
         const post : Post | null = await GetPost(createdPostIdOne);
         expect(post).not.toBeNull();
