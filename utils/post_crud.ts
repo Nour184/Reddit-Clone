@@ -94,7 +94,7 @@ export async function VotePost(
 ): Promise<void> {
     try {
         await pool.query(
-            "SELECT like_post($1, $2, $3)",
+            "SELECT vote_post($1, $2, $3)",
             [user_email, post_id, flag]
         );
     } catch (err) {
