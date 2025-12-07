@@ -1,23 +1,5 @@
-import pkg from 'pg';
 import {HashPassword, VerifyPassword} from "./hash";
-import {User} from "./interfaces";
-const { Pool } = pkg;
-
-// Configure your database connection
-const pool = new Pool({
-    user: 'postgres',
-    host: 'localhost',
-    database: 'postgres',
-    password: '12345678',
-    port: 5432,
-});
-
-/* Example usage
-(async () => {
-    await createUser('alice@example.com', 'alice123', 'securePassword');
-    await pool.end(); // Close the connection pool when done
-})();
-*/
+import pool, {User} from "./interfaces";
 
 /**
  * Creates a new user in the database.
