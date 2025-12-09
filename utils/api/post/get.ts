@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import {GetPost} from "../../utils/post_crud";
-import {Post} from "../../utils/interfaces";
+import {GetPost} from "../../crud/post_crud";
+import {Post} from "../../interfaces";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'GET') {

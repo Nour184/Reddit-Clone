@@ -1,4 +1,4 @@
-import pool, {Post} from "./interfaces";
+import pool, {Post} from "../interfaces";
 
 /**
  * Creates a new post in the database.

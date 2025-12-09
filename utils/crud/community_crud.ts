@@ -1,9 +1,9 @@
-import pool from "./interfaces";
+import pool from "../interfaces";
 
 // =============================
 // CREATE Community
 // =============================
-export async function createCommunity(
+export async function CreateCommunity(
   name: string,
   description: string,
   photo: string | null,
@@ -23,7 +23,7 @@ export async function createCommunity(
 // =============================
 // READ Community by name
 // =============================
-export async function getCommunity(name: string) {
+export async function GetCommunity(name: string) {
   const query = `
     SELECT * FROM communities
     WHERE name = $1;
@@ -36,7 +36,7 @@ export async function getCommunity(name: string) {
 // =============================
 // READ all communities
 // =============================
-export async function getAllCommunities() {
+export async function GetAllCommunities() {
   const result = await pool.query(`
     SELECT * FROM communities
     ORDER BY created_on DESC;
@@ -46,7 +46,7 @@ export async function getAllCommunities() {
 // =============================
 // UPDATE Community
 // =============================
-export async function updateCommunity(
+export async function UpdateCommunity(
   name: string,
   newDescription: string,
   newPhoto: string | null
@@ -66,7 +66,7 @@ export async function updateCommunity(
 // =============================
 // DELETE Community
 // =============================
-export async function deleteCommunity(name: string) {
+export async function DeleteCommunity(name: string) {
   const query = `
     DELETE FROM communities
     WHERE name = $1

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import {CreatePost} from "../../utils/post_crud";
+import {CreatePost} from "../../crud/post_crud";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {

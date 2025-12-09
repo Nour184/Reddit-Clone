@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import {GetUser} from "../../utils/user_crud";
-import {User} from "../../utils/interfaces";
+import {ComparePasswords} from "../../crud/user_crud";
+import {GetUser} from "../../crud/user_crud";
+import {User} from "../../interfaces";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'GET') {
@@ -8,8 +9,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const email : string = req.body['email'];
+    const password : string = req.body['password'];
 
     try {
+        const authorized : boolean = await ComparePasswords(email, password);
+
+        if (!authorized) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
         const user : User | null = await GetUser(email);
 
         if (user === null) {
@@ -20,9 +28,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     } catch (err : unknown) {
         if (err instanceof Error) {
-            res.status(500).json('Error fetching user:' + err.message);
+            res.status(500).json('Error creating user:' + err.message);
         } else {
-            res.status(500).json('Error fetching user:' + err);
+            res.status(500).json('Error creating user:' + err);
         }
     }
 }

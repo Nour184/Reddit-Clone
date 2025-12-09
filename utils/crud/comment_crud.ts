@@ -1,4 +1,4 @@
-import pool, {Comment} from "./interfaces";
+import pool, {Comment} from "../interfaces";
 
 /**
  * Creates a new comment in the database.

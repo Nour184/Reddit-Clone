@@ -1,4 +1,4 @@
-import pool from '../utils/user_crud';
+import pool from '../../utils/crud/user_crud';
 import {
     CreateUser,
     GetUser,
@@ -8,7 +8,7 @@ import {
     SetPassword,
     ComparePasswords,
     DeleteUser
-} from '../utils/user_crud';
+} from '../../utils/crud/user_crud';
 
 describe('User Service', () => {
     const testEmail = 'JohnDoe@example.com';

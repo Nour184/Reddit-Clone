@@ -5,10 +5,10 @@ import {
     VotePost,
     GetPostVotes,
     DeletePost
-} from '../utils/post_crud';
-import pool, {Post} from "../utils/interfaces";
-import {createCommunity, deleteCommunity} from "../utils/community_crud";
-import {CreateUser, DeleteUser} from "../utils/user_crud";
+} from '../../utils/crud/post_crud';
+import pool, {Post} from "../../utils/interfaces";
+import {CreateCommunity, DeleteCommunity} from "../../utils/crud/community_crud";
+import {CreateUser, DeleteUser} from "../../utils/crud/user_crud";
 
 describe('Post Service', () => {
     const testEmail = 'JohnDoe@example.com';
@@ -22,14 +22,14 @@ describe('Post Service', () => {
     // Cleanup after all tests are done
     afterAll(async () => {
         await DeletePost(createdPostIdOne).catch(() => {});
-        await deleteCommunity(testCommunity).catch(() => {});
+        await DeleteCommunity(testCommunity).catch(() => {});
         await DeleteUser(testEmail).catch(() => {});
         await pool.end();
     });
 
     it('should create a post', async () => {
         await CreateUser(testEmail, "Owner", "Password");
-        await createCommunity(
+        await CreateCommunity(
             testCommunity,
             testBody,
             testPictureLink,

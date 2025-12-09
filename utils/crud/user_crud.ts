@@ -1,5 +1,5 @@
-import {HashPassword, VerifyPassword} from "./hash";
-import pool, {User} from "./interfaces";
+import {HashPassword, VerifyPassword} from "../hash";
+import pool, {User} from "../interfaces";
 
 /**
  * Creates a new user in the database.

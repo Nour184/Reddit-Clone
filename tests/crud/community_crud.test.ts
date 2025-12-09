@@ -1,12 +1,12 @@
-import pool from "../utils/interfaces";
+import pool from "../../utils/interfaces";
 import {
-    createCommunity,
-    getCommunity,
-    getAllCommunities,
-    updateCommunity,
-    deleteCommunity,
-} from "../utils/community_crud";
-import {CreateUser, DeleteUser} from "../utils/user_crud";
+    CreateCommunity,
+    GetCommunity,
+    GetAllCommunities,
+    UpdateCommunity,
+    DeleteCommunity,
+} from "../../utils/crud/community_crud";
+import {CreateUser, DeleteUser} from "../../utils/crud/user_crud";
 
 describe("Community Service", () => {
     const testName = "TestCommunity";
@@ -19,7 +19,7 @@ describe("Community Service", () => {
 
     // Cleanup after all tests
     afterAll(async () => {
-        await deleteCommunity(testName).catch(() => {});
+        await DeleteCommunity(testName).catch(() => {});
         await DeleteUser(testOwner).catch(() => {});
         await pool.end();
     });
@@ -29,7 +29,7 @@ describe("Community Service", () => {
     // ============================
     it("should create a community", async () => {
         await CreateUser(testOwner, "Owner", "Password");
-        const community = await createCommunity(
+        const community = await CreateCommunity(
             testName,
             testDescription,
             testPhoto,
@@ -47,7 +47,7 @@ describe("Community Service", () => {
     // READ by name
     // ============================
     it("should get a community by name", async () => {
-        const community = await getCommunity(testName);
+        const community = await GetCommunity(testName);
 
         expect(community).not.toBeNull();
         expect(community.name).toBe(testName);
@@ -60,7 +60,7 @@ describe("Community Service", () => {
     // READ all communities
     // ============================
     it("should return all communities", async () => {
-        const communities = await getAllCommunities();
+        const communities = await GetAllCommunities();
 
         expect(Array.isArray(communities)).toBe(true);
         expect(communities.length).toBeGreaterThan(0);
@@ -74,7 +74,7 @@ describe("Community Service", () => {
     // UPDATE
     // ============================
     it("should update a community", async () => {
-        const updated = await updateCommunity(
+        const updated = await UpdateCommunity(
             testName,
             updatedDescription,
             updatedPhoto
@@ -86,7 +86,7 @@ describe("Community Service", () => {
         expect(updated.community_photo_link).toBe(updatedPhoto);
 
         // Confirm by reading back
-        const check = await getCommunity(testName);
+        const check = await GetCommunity(testName);
         expect(check.description).toBe(updatedDescription);
         expect(check.community_photo_link).toBe(updatedPhoto);
     });
@@ -95,12 +95,12 @@ describe("Community Service", () => {
     // DELETE
     // ============================
     it("should delete a community", async () => {
-        const deleted = await deleteCommunity(testName);
+        const deleted = await DeleteCommunity(testName);
 
         expect(deleted).not.toBeNull();
         expect(deleted.name).toBe(testName);
 
-        const after = await getCommunity(testName);
+        const after = await GetCommunity(testName);
         expect(after).toBeUndefined();
     });
 });

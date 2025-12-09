@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import {CreateUser} from "../../utils/user_crud";
+import {CreateUser} from "../../crud/user_crud";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
