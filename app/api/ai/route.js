@@ -1,18 +1,17 @@
 import { errorHandlerMiddleware } from "../../../services/middlewareHandlers/errorHandlerMiddleware";
 import { NextResponse } from "next/server";
-import { mockData } from "../../../services/mockData.js";
 import { GoogleGenAI } from "@google/genai";
+import { GetPost } from "../../../utils/crud/post_crud";
 
 const ai = new GoogleGenAI({
-    apiKey: "Removed for security reasons"
+    apiKey: "AIzaSyAp6v0fbZ2dInW0HhkA-98VEtWvvLB2sHo"
 });
 
 const rateLimitStore = new Map(); // for rate limiting (prevent abuse)
 
 
 async function summarize_post(request) {
-    const data = await request.json();
-    const postID = data?.postID;
+    const postID = request.nextUrl.searchParams.get("postID");
 
     const ip = request.headers.get("x-forwarded-for") || "local";
 
@@ -38,13 +37,17 @@ async function summarize_post(request) {
         return NextResponse.json({ error: "postID is required" }, { status: 400 });
     }
 
-    const post = mockData.Posts.find(p => p.postID === postID);
+    const post = await GetPost(postID);
     if (!post) {
         return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
-    const prompt = `
-        You are an expert technical summarizer.
+    let prompt;
+    let summaryResult;
+
+    if (!post.pictureLink) {
+
+        prompt = `You are an expert technical summarizer.
 
         Write a **clear, concise summary (2–4 sentences)** of the following Reddit-style post.
         Do NOT add extra information. Do NOT invent solutions. Only summarize.
@@ -55,12 +58,43 @@ async function summarize_post(request) {
         ${post.body ?? "(No content)"}        
         `;
 
-    const result = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: prompt
-    });
+        summaryResult = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt
+        });
+    }
+    else {
+        prompt = `You are an expert technical summarizer.
 
-    const summaryText = result.text || "No summary generated.";
+        Write a **clear, concise summary (2–4 sentences)** of the following Reddit-style post.
+        Do NOT add extra information. Do NOT invent solutions. Only summarize.
+
+        Title: ${post.title ?? "(No title)"}
+
+        Body:
+        ${post.body ?? "(No content)"}
+        
+        Image: attached below
+        `;
+        const imageResult = await fetch(post.pictureLink);
+        const imageBlob = await imageResult.blob();
+        const imageBase64 = Buffer.from(await imageBlob.arrayBuffer()).toString("base64");
+
+        summaryResult = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: [
+                {
+                    inlineData: {
+                        mimeType: 'image/jpeg',
+                        data: imageBase64,
+                    },
+                },
+                { text: prompt }
+            ],
+        });
+    }
+
+    const summaryText = summaryResult.text || "No summary generated.";
 
     return NextResponse.json(
         { summary: summaryText },
@@ -68,4 +102,4 @@ async function summarize_post(request) {
     );
 }
 
-export const POST = errorHandlerMiddleware(summarize_post);
+export const GET = errorHandlerMiddleware(summarize_post);

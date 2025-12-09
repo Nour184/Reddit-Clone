@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { errorHandlerMiddleware } from "../../../services/middlewareHandlers/errorHandlerMiddleware.js";
-import { mockData } from "../../../services/mockData.js";
+import { GetAllCommunities, CreateCommunity } from "../../../utils/crud/community_crud.ts";
 
 async function get_communities(request) {
     const { searchParams } = new URL(request.url);
@@ -8,7 +8,7 @@ async function get_communities(request) {
     const limit = parseInt(searchParams.get('limit') || '10', 10);
     const page = parseInt(searchParams.get('page') || '1', 10);
 
-    let communities = mockData.Communities;
+    let communities = await GetAllCommunities();
 
     if (query) {
         const lowerQuery = query.toLowerCase();
@@ -26,22 +26,15 @@ async function get_communities(request) {
 }
 
 async function post_community(request) {
-    const { name, description, communityPhotoLink } = await request.json();
-    const communities = mockData.Communities;
+    const { name, description, communityPhotoLink, communityOwner } = await request.json();
+    const communities = await GetAllCommunities();
 
     if (communities.find(c => c.name.toLowerCase() === name.toLowerCase())) {
         return NextResponse.json({ error: "Community already exists" }, { status: 400 });
     }
 
-    const newCommunity = {
-        id: communities.length + 1,
-        name,
-        description,
-        communityPhotoLink,
-        createdOn: new Date(),
-    };
-    communities.push(newCommunity);
-    return NextResponse.json(newCommunity, { status: 201 });
+    await CreateCommunity(name, description, communityPhotoLink, communityOwner);
+    return NextResponse.json({ message: "Community created successfully" }, { status: 201 });
 }
 
 export const GET = errorHandlerMiddleware(get_communities);

@@ -107,6 +107,15 @@ export const mockData = {
       pictureLink: 'https://picsum.photos/600/400?post=2',
       createdAt: new Date('2025-11-21T08:30:00Z'),
     },
+    {
+      postID: 'post-103',
+      userEmail: 'bob@user.com',
+      communityName: 'r/NextjsDevs',
+      title: 'challenging post!',
+      body: 'I want you to describe the image from your point of view.',
+      pictureLink: 'https://media.istockphoto.com/id/1408255024/photo/developers-discussing-programming-code.jpg?s=1024x1024&w=is&k=20&c=jsSmpDAw2uBeVigtxuKAWwxjX-sjJPYmUQb19vayub4=',
+      createdAt: new Date('2025-11-20T10:00:00Z'),
+    }
   ],
 
   Comments: [

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { errorHandlerMiddleware } from "../../../../services/middlewareHandlers/errorHandlerMiddleware.js";
-import { mockData } from "../../../../services/mockData.js";
+import { GetAllCommunities, DeleteCommunity } from "@/utils/crud/community_crud.js";
 
 async function get_community(request, { params }) {
     const { name } = await params;
-    const communities = mockData.Communities;
+    const communities = GetAllCommunities();
 
     const community = communities.find(c => c.name === name);
     if (!community) {
@@ -14,29 +14,36 @@ async function get_community(request, { params }) {
     return NextResponse.json(community, { status: 200 });
 }
 
+// TODO: add a security layer to delete_community
+/*
+    Authentication (only logged-in users)
+    Authorization (only community creator can delete)
+*/
 async function delete_community(request, { params }) {
     const { name } = await params;
-    const communities = mockData.Communities;
+    const communities = GetAllCommunities();
 
     const community = communities.find(c => c.name === name);
     if (!community) {
         return NextResponse.json({ error: "Community not found" }, { status: 404 });
     }
 
-    const index = communities.indexOf(community);
-    communities.splice(index, 1);
-
-    // Delete all posts from this community
-    mockData.Posts = mockData.Posts.filter(p => p.communityName !== name);
+    await DeleteCommunity(name); // Community Deletion cascades to posts
 
     return NextResponse.json({ message: "Community deleted successfully" }, { status: 200 });
 }
 
+// TODO: add a security layer to patch_community
+/*
+    Authentication (only logged-in users)
+    Authorization (only community creator or moderators can edit)
+    Input validation (string length, URL format, etc.)
+*/
 async function patch_community(request, { params }) {
     const { name } = await params;
     const { description, communityPhotoLink } = await request.json();
 
-    const communities = mockData.Communities;
+    const communities = await GetAllCommunities();
 
     const community = communities.find(c => c.name === name);
     if (!community) {
@@ -50,6 +57,8 @@ async function patch_community(request, { params }) {
     if (communityPhotoLink) {
         community.communityPhotoLink = communityPhotoLink;
     }
+
+    await UpdateCommunity(name, community.description, community.communityPhotoLink);
 
     return NextResponse.json(community, { status: 200 });
 }
