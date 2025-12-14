@@ -117,5 +117,82 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+***************************TESTing Queries***********************/
+SELECT * FROM posts 
+WHERE community_name = 'gamers';
+
+-- 1)Get posts for a specific user's profile (e.g., "JohnDoe's" posts)
+
+CREATE OR REPLACE FUNCTION get_user_posts (p_user_email TEXT)
+RETURNS TABLE (
+    post_id INT,
+    user_email TEXT,
+    community_name TEXT,
+    title TEXT,
+    body TEXT,
+    picture_link TEXT,
+    created_on TIMESTAMP
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT p.post_id, p.user_email, p.community_name, p.title, p.body, p.picture_link, p.created_on
+    FROM posts p
+    WHERE p.user_email = p_user_email
+    ORDER BY p.created_on DESC;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- 2)Get Public Feed (For Guests / Not Logged In)
+
+CREATE OR REPLACE FUNCTION get_public_feed()
+RETURNS TABLE (
+    post_id INT,
+    user_email TEXT,
+    community_name TEXT,
+    title TEXT,
+    body TEXT,
+    picture_link TEXT,
+    created_on TIMESTAMP
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT p.post_id, p.user_email, p.community_name, p.title, p.body, p.picture_link, p.created_on
+    FROM posts p
+    ORDER BY p.created_on DESC
+    LIMIT 50;
+END;
+$$ LANGUAGE plpgsql;
+
+--  3)Get Personalized Feed (For Logged In Users)
+
+CREATE OR REPLACE FUNCTION get_personalized_feed(p_user_email TEXT)
+RETURNS TABLE (
+    post_id INT,
+    user_email TEXT,
+    community_name TEXT,
+    title TEXT,
+    body TEXT,
+    picture_link TEXT,
+    created_on TIMESTAMP
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT p.post_id, p.user_email, p.community_name, p.title, p.body, p.picture_link, p.created_on
+    FROM posts p
+    WHERE 
+        -- Condition 1: Post is in a community I have joined
+        p.community_name IN (
+            SELECT jc.community_name 
+            FROM joined_communities jc 
+            WHERE jc.user_email = p_user_email
+        )
+        OR 
+        -- Condition 2: Or user created the post themselves (so user can see his own posts)
+        p.user_email = p_user_email
+    ORDER BY p.created_on DESC
+    LIMIT 100;
+END;
+$$ LANGUAGE plpgsql;
 
  */

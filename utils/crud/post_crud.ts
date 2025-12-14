@@ -64,6 +64,46 @@ export async function GetCommunityPosts(community_name: string): Promise<Post[]>
     }
 }
 
+/*
+  get all posts created by user
+ */
+export async function GetPostsCreatedByUser( user_email: string):Promise<Post[]>{
+    try{
+        const result = await pool.query(
+            "SELECT * FROM get_user_posts($1)",
+            [user_email]
+        );
+        return result.rows
+
+    }catch(error){
+        console.error("Error getting posts created by user:", error);
+        throw error;
+    }
+}
+
+export async function GetPublicFeedPosts():Promise<Post[]> {
+    try {
+        const result = await pool.query("SELECT * FROM get_public_feed()");
+        return result.rows
+    }catch(error){
+        console.error("Error getting public feed posts:", error);
+        throw error;
+    }
+}
+
+export async function GetPersonalizedFeedForLoggedInUser(user_email: string):Promise<Post[]>{
+        try {
+        const result = await pool.query("SELECT * FROM get_personalized_feed($1)", [user_email]);
+        return result.rows
+    }catch(error){
+        console.error("Error getting personalized feed posts:", error);
+        throw error;
+    }
+}
+
+
+
+
 /**
  * Deletes a post from the database.
  *
