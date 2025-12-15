@@ -39,9 +39,10 @@ export async function GET(req,res){
    // console.log(err);
   // }
 
-  const joinedCummunities  = await GetJoinedCommunities(testEmail1);
+  const allCommunities = await GetAllCommunities();
+  //const joinedCummunities  = await GetJoinedCommunities(testEmail1);
     try{
-       return NextResponse.json(joinedCummunities);
+       return NextResponse.json(allCommunities);
    }catch(err){ 
     console.log(err);
    }
