@@ -1,4 +1,4 @@
-import { CreateUser, GetUser } from "../../../../utils/crud/user_crud.ts";
+import { CreateUser, GetUser, IsUsernameAvailable } from "../../../../utils/crud/user_crud.ts";
 import { NextResponse } from "next/server";
 import { registerSchema } from "../../../../utils/validators.ts";
 
@@ -20,6 +20,11 @@ export async function POST(request) {
     const user = await GetUser(email);
     if (user) {
         return NextResponse.json({ error: "User already exists" }, { status: 400 });
+    }
+
+    const isAvailable = await IsUsernameAvailable(name);
+    if (!isAvailable) {
+        return NextResponse.json({ error: "Username already exists" }, { status: 400 });
     }
 
     await CreateUser(email, name, password);

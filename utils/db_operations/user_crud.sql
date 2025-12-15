@@ -99,6 +99,22 @@ END;
 $$ LANGUAGE plpgsql;
 
 /*
+Checks if username is available.
+ */
+CREATE OR REPLACE FUNCTION is_username_available(p_username TEXT)
+RETURNS BOOLEAN AS $$
+DECLARE
+    result BOOLEAN;
+BEGIN
+    SELECT (COUNT(*) = 0) INTO result
+    FROM users
+    WHERE username = p_username;
+
+    RETURN result;
+END;
+$$ LANGUAGE plpgsql;
+
+/*
 Gets the user whose email is equal to p_email
 Deletes that user
 Foreign keys referencing users are set to cascade
