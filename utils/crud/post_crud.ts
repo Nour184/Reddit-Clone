@@ -200,3 +200,14 @@ export async function GetPostVotes(
         throw err;
     }
 }
+
+//to unvote a post
+export async function DeleteVote(userEmail: string, postId: number): Promise<void> {
+    try {
+        // use SELECT to call the function because it returns void
+        await pool.query("SELECT delete_vote($1, $2)", [userEmail, postId]);
+    } catch (err) {
+        console.error("Error deleting vote:", err);
+        throw err;
+    }
+}

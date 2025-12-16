@@ -1,76 +1,66 @@
-//TODO: GET , DELETE , PATCH(modify the comment)
 import { NextResponse } from "next/server";
 import { errorHandlerMiddleware } from '@services/middlewareHandlers/errorHandlerMiddleware';
-//dummy data to simulate posts
-import { mockData } from '@services/mockData';
+import { GetComment,UpdateComment, DeleteComment } from '@utils/crud/comment_crud';
+import { commentsValidator } from '@utils/validators';
+
+//used in testing before authentication
+const testEmail1 = 'JohnDoe@example.com';
+const testEmail2 = 'hamdahelal@forfun.com';
 
 
-/*
- implement the GET method so that when a comment id edited dont query the whole db to get all comments again 
- to rerender instead get that edited comment and rerender it only 
-*/
 
-//==========>  TO BE DONE make a function that queries the db !!!
-function getComment(commentId){}
+ async function get_Comment_Handler(request,context){
 
-
- async function get_Comment_Handler(request,{params}){
-
+    const { params } = await context;
     const { commentId } = await params;
-        
-    //query db 
-    const comment = mockData.Comments.find( p => String(p.commentID) === String(commentId) );
-    if(!comment){ return NextResponse.json({ message: "No comment with this id found!!" }, { status: 404 });}//no comment found
+    let comment;
+    //make sure id is a number
+    const numericId = Number(commentId);  
+    if(commentId && Number.isInteger(numericId)){   //check whether the id is an integer or not
+        comment =  await GetComment(numericId); //query db
+    }
+    if(comment){ return NextResponse.json(comment); }//comment found!!
 
-    return NextResponse.json(comment);//comment found!!
-
-}
-
-
-//implement/edit it so that it modifies the db comment
-function modifyComment(commentId , modifies){
-    //can only modify body of the comment
-    //query db 
-    const comment = mockData.Comments.find( p=> String(p.commentID) === String(commentId) );
-    if (!comment){return comment;}//no comment found
-
-    comment.body = modifies.body; //if comment was found edit it 
-    //update the db instead
-    mockData.Comments.find( p => String(p.commentID) === String(commentId) ).body =  modifies.body; 
-    return comment;
-
-}
-
- async function patch_Comment_Handler(request,{ params }){
-
-    const modifies = await request.json();
-    const { commentId } = await params;
-
-    let modifiedComment = modifyComment(commentId , modifies);
-    if(!modifiedComment){ return NextResponse.json({ message: "No comment with this id found!!" }, { status: 404 });}//no comment found}
-
-    return NextResponse.json(modifiedComment);//return comment after modifications
+    //else return comment not found
+    return NextResponse.json({ message: "No comment with this id found!!" }, { status: 404 });//no comment found
 }
 
 
 
+ async function patch_Comment_Handler(request,context){
 
- async function delete_Comment_Handler(request , { params }){
-
+    const { params } = await context;
     const { commentId } = await params;
-    //simulate querying the DB!!!
-    const IndexOfCommentToDelete = mockData.Comments.findIndex(comm=> String(comm.commentID) === String(commentId));
+    const commentUpdates = await request.json(); //get data to update 
+    //validate new comment updates (body and postid)
+    const partialCommentValidator = commentsValidator.partial();
+    const validatedData = partialCommentValidator.parse(commentUpdates);
 
-    if(IndexOfCommentToDelete < 0 ){ return NextResponse.json({ message: "No comment with this ID found!!" }, { status: 404 });}//comment not found
+    const numericId = Number(commentId);  
+    if(validatedData){
+        const updatedComment = await UpdateComment(numericId,testEmail1,validatedData.body)
+        return NextResponse.json(updatedComment);//return comment after modifications
+    }//no comment found
 
-    console.log("before:", mockData.Comments.length); //for debugging
-    const deletedComment = mockData.Comments.splice(IndexOfCommentToDelete,1); //array.splice(startIndex, deleteCount)=> returns an array of the deleted stuff
-    console.log("after:", mockData.Comments.length); //for debugging 
-    //it actually deletes it but it becomes reloaded again !!
-    console.log("deleted comment: " , deletedComment);
+    return NextResponse.json({ message: "No comment with this id found to modify!!" }, { status: 404 });//else no comment found
+}
 
-    return NextResponse.json({message:"comment deleted successfully" 
-        , comment : deletedComment
+//delete a comment 
+async function delete_Comment_Handler(request, { params }) {
+    const { commentId } = await params;
+    const numericId = Number(commentId);
+
+    // Validate ID format
+    if (!commentId || !Number.isInteger(numericId)) {
+        return NextResponse.json({ message: "Invalid Comment ID" }, { status: 400 });
+    }
+
+    //perform deletetion
+    await DeleteComment(numericId);
+
+    return NextResponse.json({
+        message: "Comment deleted successfully",
+        commentID: commentId
     });
 }
 

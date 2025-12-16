@@ -1,5 +1,3 @@
-// THIS IS CALLED BY THE FRONTEND TO FETCH ALL POSTS FOR EXAMPLE FOR THE HOME FEED !!
-//import { responseMiddleware } from '@services/middlewareHandlers/responseMiddleware';
 import { NextResponse } from "next/server";
 import { errorHandlerMiddleware } from '@services/middlewareHandlers/errorHandlerMiddleware';
 import { feedPaginationValidator, postValidator } from '@utils/validators';

@@ -7,32 +7,27 @@ import { postValidator } from '@utils/validators';
 const testEmail1 = 'JohnDoe@example.com';
 const testEmail2 = 'hamdahelal@forfun.com';
 
-//make a separatre function to be used by GET and DELETE to query the database when passed a specific post id !!!
-//function Query_DB_For_Post(){}
 
 //get a specific post 
 async function get_Post_Handler (request,context){
         
-
-    //const url = new URL(request.url);
-    //const post_id = url.searchParams.get('postID');
-    let searchedPost = {};
     const { params } = await context;
     const { id } = await params;
     console.log("this is the params recieved: ",params);   //debugging purposes
     console.log("this is the id form params: ",id);       //debugging purposes
     
     const numericId = Number(id);  
-    if(id && Number.isInteger(numericId)){   //check whether the id is an integer or not 
-        searchedPost = await GetPost(numericId); //query db
+   if (!id || !Number.isInteger(numericId)) {
+        return NextResponse.json({ message: "Invalid Post ID" }, { status: 400 }); //bad request
     }
-    else{
-        return NextResponse.json({ message: "Invalid Post ID!!" }, { status: 400 }); //invalid id
+
+    //query DB
+    const searchedPost = await GetPost(numericId);
+
+    //If no post found
+    if (!searchedPost) {
+        return NextResponse.json({ message: "No Post with this ID found!!" }, { status: 404 });
     }
-    
-    //if no post with this id found return an error msg
-    if(!searchedPost){return NextResponse.json({ message: "No Post with this ID found!!" }, { status: 404 });}//post not found
- 
     return NextResponse.json(searchedPost);//post found     
 }
 
@@ -46,16 +41,24 @@ async function patch_Post_Handler (request , context){
     console.log("this is the params recieved: ",params);   //debugging purposes
     console.log("this is the id from params: ",id);       //debugging purposes
 
-    const data_to_be_updated = await request.json();
-    const partialPostValidator  = postValidator.partial(); //to allow zod to zalidate only the passed fields
-    const validUpdates = partialPostValidator.parse(data_to_be_updated);//valifdate incoming updates on post
-    
-    //if data is valid query the db to update the post
-    if(validUpdates){
-        const updatedPost = await UpdatePost(parseInt(id),testEmail1,validUpdates);
-        return NextResponse.json(updatedPost); //return updated post
+    //validate ID first
+    if (!id || !Number.isInteger(numericId)) {
+        return NextResponse.json({ message: "Invalid Post ID" }, { status: 400 }); //bad req
     }
-    return NextResponse.json({message:'error updating post'}, {status : 500}); //if couldnt update post
+
+    const data_to_be_updated = await request.json();
+
+    //Validation
+    const partialPostValidator = postValidator.partial();
+    //Zod .parse() will throw error if invalid; errorHandlerMiddleware will catch it.
+    const validUpdates = partialPostValidator.parse(data_to_be_updated);
+
+    const updatedPost = await UpdatePost(numericId, testEmail1, validUpdates); //query db
+    if (!updatedPost) {
+        // This means the ID didn't exist in the DB
+        return NextResponse.json({ message: "Post not found or could not be updated" }, { status: 404 });
+    }
+    return NextResponse.json(updatedPost); //if couldnt update post
 
 }
 
@@ -69,15 +72,17 @@ async function patch_Post_Handler (request , context){
     console.log("this is the params recieved: ",params);   //debugging purposes
     console.log("this is the id from params: ",id);       //debugging purposes
 
-    let deletedPost;
-    const numericId = Number(id); 
-    if(id && Number.isInteger(numericId)){   //check whether the id is an integer or not 
-        deletedPost = await DeletePost(numericId); //query db
-        return NextResponse.json({message:"post deleted successfully"});//won'y return the deleted post for now
-    } 
-    return NextResponse.json({message:"ERROR: could not delete post"},{status:500})
-   
+   //validate ID
+    if (!id || !Number.isInteger(numericId)) {
+        return NextResponse.json({ message: "Invalid Post ID" }, { status: 400 });
+    }
+
+    // query db 
+    await DeletePost(numericId);
+
+    return NextResponse.json({ message: "Post deleted successfully" });  
 }
+
 
 export const GET = errorHandlerMiddleware(get_Post_Handler);
 

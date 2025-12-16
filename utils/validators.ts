@@ -9,7 +9,7 @@ export const feedPaginationValidator  = z.object({
 
 //TODO: mainly those down here for now !!
 
-//validate post passed data
+//validate post's passed data
 export const postValidator = z.object({
     title: z.string().min(1).max(300),
     body: z.string().optional(),
@@ -19,10 +19,16 @@ export const postValidator = z.object({
 });
 
 
-//validate comment passed data
-
+//validate comment's passed data
+export const commentsValidator = z.object({
+    post_id: z.number().int(),
+    body: z.string().min(1).max(2000)
+});
 
 
 //validate votes passed data 
-
+export const votesValidator = z.object({
+    post_id: z.number().int(),
+    flag: z.union([z.literal(1), z.literal(-1)]) //make sure flag is either 1 or -1 only
+});
 
