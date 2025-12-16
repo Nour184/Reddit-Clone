@@ -73,7 +73,7 @@ async function patch_Profile_Handler(request) {
 }
 
 
- async function delete_user(request) {
+async function delete_user(request) {
 
     const { searchParams } = new URL(request.url);
     let email = testEmail2; //get from auth 

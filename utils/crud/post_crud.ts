@@ -211,3 +211,25 @@ export async function DeleteVote(userEmail: string, postId: number): Promise<voi
         throw err;
     }
 }
+
+//for the post media public ip in cloudinary
+export async function SavePostMediaInfo(postId: number, publicId: string): Promise<void> {
+    const query = `
+        INSERT INTO post_media_info (post_id, public_id)
+        VALUES ($1, $2)
+        ON CONFLICT (post_id) 
+        DO UPDATE SET public_id = $2;
+    `;
+    await pool.query(query, [postId, publicId]);
+}
+
+//get the Public ID for a specific post
+export async function GetPostMediaInfo(postId: number): Promise<{ public_id: string } | undefined> {
+    const query = `
+        SELECT public_id 
+        FROM post_media_info 
+        WHERE post_id = $1
+    `;
+    const res = await pool.query(query, [postId]);
+    return res.rows[0]; // Returns { public_id: '...' } or undefined if no image exists
+}

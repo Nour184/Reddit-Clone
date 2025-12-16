@@ -4,7 +4,7 @@ import { feedPaginationValidator, postValidator } from '@utils/validators';
 import { GetAllCommunities , CreateCommunity , GetCommunity } from '@utils/crud/community_crud';
 import {CreatePost ,GetCommunityPosts,
     GetPostsCreatedByUser, GetPublicFeedPosts,
-    GetPersonalizedFeedForLoggedInUser} from '@utils/crud/post_crud';
+    GetPersonalizedFeedForLoggedInUser , SavePostMediaInfo} from '@utils/crud/post_crud';
 import cloudinary from '@services/cloudinary';
 
 //used in testing before authentication
@@ -117,6 +117,7 @@ async function uploadToCloudinary(data){
         if (error) reject(error);
         else resolve({
           url: result.secure_url,
+          public_id: result.public_id, //get media public ip
           type: result.resource_type // Returns 'image' or 'video'
         });
       }
@@ -134,7 +135,7 @@ async function uploadToCloudinary(data){
     const title = postInfo.get("title");
     const body = postInfo.get("body");
     const media = postInfo.get("media");
-    const data_to_be_validated = {community_name,title,body}
+    const data_to_be_validated = {community_name,title,body};
 
     const validPostInfo = postValidator.parse(data_to_be_validated); //validate incoming post data 
 
@@ -143,16 +144,23 @@ async function uploadToCloudinary(data){
     if (!communityExists) {
         return NextResponse.json({ message: "Community not found!" }, { status: 404 });
     }
+    let mediaUrl = null;
+    let mediaPublicId = null;
 
     if (media && media.size > 0) {
-            // Call uploader helper
-            console.log("uploading now....");
-            const uploadResult = await uploadToCloudinary(media);  
+      // Call uploader helper
+      console.log("uploading now....");
+      const uploadResult = await uploadToCloudinary(media);  
 
-            mediaUrl = uploadResult.url; //return this to frontend and save it in db
-        }
+      mediaUrl = uploadResult.url; //return this to frontend and save it in db
+      mediaPublicId = uploadResult.public_id;
+    }
     //if exists and data is validated create post
-    const newPost = await CreatePost( testEmail2, validPostInfo.community_name, validPostInfo.title, validPostInfo.body,mediaUrl);
+    const newPost = await CreatePost( testEmail1, validPostInfo.community_name, validPostInfo.title, validPostInfo.body,mediaUrl);
+    //save the media public ip in db 
+    if (mediaPublicId && newPost && newPost.post_id) {
+      await SavePostMediaInfo(newPost.post_id, mediaPublicId);
+   } 
     return NextResponse.json(newPost, { status: 201 });
 
 }
