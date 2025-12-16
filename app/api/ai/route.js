@@ -4,7 +4,7 @@ import { GoogleGenAI } from "@google/genai";
 import { GetPost } from "../../../utils/crud/post_crud";
 
 const ai = new GoogleGenAI({
-    apiKey: "AIzaSyAp6v0fbZ2dInW0HhkA-98VEtWvvLB2sHo"
+    apiKey: process.env.GOOGLE_API_KEY
 });
 
 const rateLimitStore = new Map(); // for rate limiting (prevent abuse)
