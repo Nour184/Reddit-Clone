@@ -7,94 +7,64 @@ import {CreatePost ,GetCommunityPosts,
     GetPersonalizedFeedForLoggedInUser , SavePostMediaInfo} from '@utils/crud/post_crud';
 import cloudinary from '@services/cloudinary';
 
-//used in testing before authentication
- const testEmail1 = 'JohnDoe@example.com';
- const testEmail2 = 'hamdahelal@forfun.com';
+import { auth } from '@services/auth';
 
 //GET method
 //get all posts 1) for a normal feed to a specific user , 2) for a specific community 
 // , 3) the posts created by that user only 
  async function get_Posts_Handler(request,response){
     
-    let isLoggedInUser = true; //hard coded just for testing !!
-    const loggedInUser = testEmail1; //hard coded just for testing !!
+    const session = await auth();
+    const isLoggedIn = Boolean(session?.user);
+    const userEmail = session?.user?.email;
     
     const url = new URL(request.url);
     const communityName = url.searchParams.get('communityName');
     const myPosts = url.searchParams.has('myPosts');
     const cursor = url.searchParams.get('cursor');
-    let posts = {}; //posts to be returned
-    let nextCursor = null;//cursor to be retunrd
+    let posts = []; //posts to be returned
+    let nextCursor = null;//cursor to be returned from frontend
 
+  
     //************************************validate pagination params********************************//
-    //let the limit = 8 for now (its default value)
-    const limit = 3; //######change to 8 again later!!
-    let  validLimit,validCursor ;
-    try{
-        const validatedParams = feedPaginationValidator.parse({limit,cursor: cursor || undefined});
-        validLimit = validatedParams.limit;
-        validCursor = validatedParams.cursor || null;
-    }catch(error){
-        console.log("data validation error",error);
+    let validCursor = cursor || null;
+    const limit = 8; //let it be constant 8 wont let frontend choose
+
+    const fetchLimit = limit + 1;
+  
+
+    //************************************fetch posts logic**************************************//
+
+    //fetch community posts
+    if (communityName) {
+        posts = await GetCommunityPosts(communityName, fetchLimit, validCursor);
+    }
+    //fetch users made posts (requires user to be logged in)
+    else if (myPosts) {
+      if (!isLoggedIn) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      posts = await GetPostsCreatedByUser(userEmail, fetchLimit, validCursor);
     }
 
-    //************************************logic to fetch posts**************************************//
-
-    //fetch public feed posts for not logged in users
-    if(!isLoggedInUser){         
-        //TODO:
-        //need to validate the limit(if gonna be even passed) and the cursor they pass!!
-        //use feedPaginationValidator() from validation file
-        //let the limit = 8 for now (its default value)
-        posts = await GetPublicFeedPosts(validLimit +1 ,validCursor); //+1 to check if there are new posts to return
-
-        if(posts.length > validLimit){ 
-           posts.pop();  //remove last post since it exists
-           const lastPost = posts[posts.length - 1];        
-           nextCursor = lastPost.created_on; //set cursor to the last post created_on timestamp
-        }
-        else{ 
-            //leave nextCursor = null -> to make sure infinite scrolling works right 
-            nextCursor = null;
-        }
+    else {
+      if (isLoggedIn) {
+        // Now fetches Joined Posts + Viral Posts
+        posts = await GetPersonalizedFeedForLoggedInUser(userEmail, fetchLimit, validCursor);
+      } else {
+        // Logged out users just see everything (Public Feed)
+        posts = await GetPublicFeedPosts(fetchLimit, validCursor);
+      }
     }
-
-    /*
-      TODO:
-      implement GetPersonalizedFeedForLoggedInUser() in crud operations with cursor style pagination
-    */
-    //else if(isLoggedInUser){
-    //    posts = await GetPersonalizedFeedForLoggedInUser(loggedInUser);
-    //}
-    /*
-      TODO:
-      implement GetCommunityPosts() in crud operations with cursor style pagination 
-    */
-    else if(communityName /*&& isLoggedInUser*/){
-        //get posts for that specific community
-        posts = await GetCommunityPosts(communityName, validLimit ,validCursor); 
-        const lastPost = posts[posts.length -1];
-        nextCursor = lastPost? lastPost.created_on : null; //set cursor to timestamp that posts will be fetched with next
+  
+  if (posts && posts.length > limit) {
+    posts.pop(); // Remove the 9th item (it was just for checking)
+    const lastPost = posts[posts.length - 1];       
+    nextCursor = lastPost ? lastPost.created_on : null; 
+    } else {
+      nextCursor = null;
     }
-    /*frontend should pass the user email that they want to fetch their posts
-      (as they dont have to be the loggedInUser butt just a normal user)
-      TODO:
-      see how do i get the user email from the frontend in a secure way!!
-      also implement GetPostsCreatedByUser() in crud operations with cursor style pagination
-    */
-    else if (myPosts /*&& isLoggedInUser*/){       
-        console.log("the problem is caught it !!!!!"); 
-        posts = await GetPostsCreatedByUser(loggedInUser,validLimit,validCursor);
-        const  lastPost = posts[posts.length -1];
-        nextCursor = lastPost? lastPost.created_on : null; //set cursor to timestamp that posts will be fetched with next
-    }
-
-    else if(!myPosts){ 
-        console.log("caught it !!!!!");
-    }
-
-    
-    //return the posts fetched
+    //return posts fetched
     return NextResponse.json({
         FeedData: posts,
         meta: {
@@ -125,15 +95,21 @@ async function uploadToCloudinary(data){
   });
 
 }
-//TODO: add authentication just to get user email!! 
+
 //POST method --> to create a new post (returns the  id of the created post)
  async function post_Posts_Handler(request,response){
+    //authorize user 
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const email = session.user.email;
 
     const postInfo = await request.formData();
 
     const community_name = postInfo.get("community_name");
     const title = postInfo.get("title");
-    const body = postInfo.get("body");
+    const body = postInfo.get("body")|| undefined;
     const media = postInfo.get("media");
     const data_to_be_validated = {community_name,title,body};
 
@@ -156,12 +132,14 @@ async function uploadToCloudinary(data){
       mediaPublicId = uploadResult.public_id;
     }
     //if exists and data is validated create post
-    const newPost = await CreatePost( testEmail1, validPostInfo.community_name, validPostInfo.title, validPostInfo.body,mediaUrl);
-    //save the media public ip in db 
-    if (mediaPublicId && newPost && newPost.post_id) {
-      await SavePostMediaInfo(newPost.post_id, mediaPublicId);
+    const newPost = await CreatePost( email, validPostInfo.community_name, validPostInfo.title, validPostInfo.body,mediaUrl);
+    //save the media public ip in db
+    if (mediaPublicId && newPost ) {
+      await SavePostMediaInfo(newPost, mediaPublicId);
    } 
-    return NextResponse.json(newPost, { status: 201 });
+   return NextResponse.json({  //return succ msgS
+    post_id: newPost,
+    message: "Post created successfully" }, { status: 201 });
 
 }
 

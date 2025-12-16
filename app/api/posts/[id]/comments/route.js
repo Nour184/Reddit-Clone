@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
 import { errorHandlerMiddleware } from '@services/middlewareHandlers/errorHandlerMiddleware';
 import { CreateComment,GetPostComments, DeleteAllPostComments } from '@utils/crud/comment_crud';
+import { GetPost } from '@utils/crud/post_crud';
 import { commentsValidator } from '@utils/validators';
+import { auth } from '@services/auth';
 
 //TODO: do we need to get comments made by a specific user ??
-
-//used in testing before authentication
-const testEmail1 = 'JohnDoe@example.com';
-const testEmail2 = 'hamdahelal@forfun.com';
 
 
 //retrieve all comments on a specific post !!
@@ -18,9 +16,10 @@ const testEmail2 = 'hamdahelal@forfun.com';
 
     let comments = [];
     const numericId = Number(id);  
-    if(id && Number.isInteger(numericId)){   //check whether the id is an integer or not
-        comments =  await GetPostComments(numericId);
+    if(!id || !Number.isInteger(numericId)){   //check whether the id is an integer or not
+        return NextResponse.json({ message: "Invalid Post ID" }, { status: 400 });
     }
+    comments =  await GetPostComments(numericId);
     if(!(comments.length)){return NextResponse.json({ message: "No comments for this post found!!" }, { status: 404 });}//no comments found
 
     return NextResponse.json(comments);
@@ -29,16 +28,26 @@ const testEmail2 = 'hamdahelal@forfun.com';
 
 //create a new comment 
  async function Post_Comments_Handler(request , context){
-
+    //authorize user 
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const email = session.user.email;
+    
     const { params } = await context;
     const { id } = await params; //gets the post id 
+    const numericId = Number(id);
+    if (!id || !Number.isInteger(numericId)) { //check if id is valid 
+        return NextResponse.json({ message: "Invalid Post ID" }, { status: 400 });
+    }
     
     const newCommentData = await request.json();
     //validate comment data 
-    const partialCommentValidator = commentsValidator.partial();
-    const validatedData = partialCommentValidator.parse(newCommentData);
+    const bodyValidator = commentsValidator.pick({ body: true }); //choose to validate only the body of teh comment!!
+    const validatedData = bodyValidator.parse(newCommentData);
     //Create Comment
-    const commentId = await CreateComment(testEmail2, numericId, validatedData.body);
+    const commentId = await CreateComment(email, numericId, validatedData.body);
 
     if (!commentId) {
         return NextResponse.json({ message: "ERROR: could not create comment" }, { status: 500 });
@@ -55,16 +64,32 @@ const testEmail2 = 'hamdahelal@forfun.com';
 /*delete all post comments even though the db automatically deletes all post comments whenver its deleted 
   but the frontend might need to delete all post comments only not the whole post
 */
+//when a post owner wants to delete all comments in its post
 async function delete_Comments_Handler(request , {params}){
+    //authenticate user
+    const session = await auth();
+    if (!session?.user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const email = session.user.email; //logged in user
+
     const { id } = await params; //get post id
     const numericId = Number(id);  
-    if(id && Number.isInteger(numericId)){   //check whether the id is an integer or not
-        await DeleteAllPostComments(numericId); //query db
-        return NextResponse.json({message: "comments for post deleted succesfully"});
+    if(!id || !Number.isInteger(numericId)){   //check whether the id is an integer or not
+        return NextResponse.json({ message: "Invalid Post ID" }, { status: 400 });
     }
-    else{
-        return NextResponse.json({message: "ERROR: couldn't delete post comments"},{status:500});
+        
+    //check whether post belongs on user or not 
+    const post = await GetPost(numericId);
+    if (!post) {                        //check if post exists first!
+        return NextResponse.json({ message: "Post not found" }, { status: 404 });
     }
+    if (post.user_email !== email) { //check if post belongs to user 
+        return NextResponse.json({ message: "Forbidden: You are not the owner of this post" }, { status: 403 });
+    }
+    
+    await DeleteAllPostComments(numericId);
+    return NextResponse.json({ message: "Comments for post deleted successfully" });
 }
 
 

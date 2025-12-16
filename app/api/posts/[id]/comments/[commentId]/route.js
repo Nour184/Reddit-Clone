@@ -2,13 +2,10 @@ import { NextResponse } from "next/server";
 import { errorHandlerMiddleware } from '@services/middlewareHandlers/errorHandlerMiddleware';
 import { GetComment,UpdateComment, DeleteComment } from '@utils/crud/comment_crud';
 import { commentsValidator } from '@utils/validators';
-
-//used in testing before authentication
-const testEmail1 = 'JohnDoe@example.com';
-const testEmail2 = 'hamdahelal@forfun.com';
+import { auth } from '@services/auth';
 
 
-
+//fetch a comment with a specific id
  async function get_Comment_Handler(request,context){
 
     const { params } = await context;
@@ -29,6 +26,12 @@ const testEmail2 = 'hamdahelal@forfun.com';
 
  async function patch_Comment_Handler(request,context){
 
+    //authorize user 
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const email = session.user.email;
     const { params } = await context;
     const { commentId } = await params;
     const commentUpdates = await request.json(); //get data to update 
@@ -38,8 +41,10 @@ const testEmail2 = 'hamdahelal@forfun.com';
 
     const numericId = Number(commentId);  
     if(validatedData){
-        const updatedComment = await UpdateComment(numericId,testEmail1,validatedData.body)
-        return NextResponse.json(updatedComment);//return comment after modifications
+        const updatedComment = await UpdateComment(numericId,email,validatedData.body)
+        if(updatedComment){
+            return NextResponse.json(updatedComment);//return comment after modifications
+        } 
     }//no comment found
 
     return NextResponse.json({ message: "No comment with this id found to modify!!" }, { status: 404 });//else no comment found
@@ -47,6 +52,14 @@ const testEmail2 = 'hamdahelal@forfun.com';
 
 //delete a comment 
 async function delete_Comment_Handler(request, { params }) {
+    
+    //authorize user 
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const email = session.user.email;
+
     const { commentId } = await params;
     const numericId = Number(commentId);
 
@@ -54,14 +67,19 @@ async function delete_Comment_Handler(request, { params }) {
     if (!commentId || !Number.isInteger(numericId)) {
         return NextResponse.json({ message: "Invalid Comment ID" }, { status: 400 });
     }
-
-    //perform deletetion
-    await DeleteComment(numericId);
-
-    return NextResponse.json({
+    //check if the comment is owned by this user
+    const comment = await GetComment(numericId);
+    if(comment.user_email === email){
+        //perform deletetion
+        await DeleteComment(numericId);
+        return NextResponse.json({
         message: "Comment deleted successfully",
         commentID: commentId
     });
+    }
+    //else user doesnt own teh comment
+    return NextResponse.json({message: "Could not delete comment user unauthorized!!"},{ status: 401 })
+
 }
 
 

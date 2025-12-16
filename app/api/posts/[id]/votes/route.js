@@ -2,10 +2,7 @@ import { NextResponse } from "next/server";
 import { errorHandlerMiddleware } from '@services/middlewareHandlers/errorHandlerMiddleware';
 import {GetPostVotes, VotePost, DeleteVote} from '@utils/crud/post_crud';
 import {votesValidator} from '@utils/validators';
-
-//used in testing before authentication
-const testEmail1 = 'JohnDoe@example.com';
-const testEmail2 = 'hamdahelal@forfun.com';
+import { auth } from '@services/auth';
 
 /*
 do i delete only the whole votes or 
@@ -16,7 +13,7 @@ do i delete only the whole votes or
 
     const { id } = await params;
     //make sure post id is a number/int
-    const numericId = parseInt(Number(id));
+    const numericId = Number(id);
     if(numericId){ 
         const votes = await GetPostVotes(numericId);
         return NextResponse.json({ message: "successfull votes fetching",totalVotes: votes});
@@ -29,6 +26,12 @@ do i delete only the whole votes or
 }
 //vote a specific post 
 async function vote_Patch_Handler(request, context){
+    //authorize user 
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const email = session.user.email;
     const { params } = await context;
     const { id } = await params;
     const voteData = await request.json();
@@ -36,28 +39,30 @@ async function vote_Patch_Handler(request, context){
     //make sure post id is a number/int
     const validatedVoteData = votesValidator.parse(voteData);
     if(validatedVoteData){
-       await  VotePost(testEmail1,validatedVoteData.post_id,validatedVoteData.flag); //query db
+       await  VotePost(email,validatedVoteData.post_id,validatedVoteData.flag); //query db
         return NextResponse.json({ message: "Vote added successfully."});
     }
     return NextResponse.json({message: "ERROR voting!!"},{status: 400});
 
 }
 
-/*
-  does this even needs implementation ??
-*/
 
 //delete a vote of a post by a user
  async function delete_Votes_Handler (request , { params }){
+    //authorize user 
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const email = session.user.email;
 
     const { id } = await params;
     const postId = Number(id);
     if(postId){
-        DeleteVote(testEmail1,postId);//query db 
+        await DeleteVote(email,postId);//query db 
         return NextResponse.json({message: "succesfull unvote!!"});
     }
-    return NextResponse.json({message: "ERROR: Could not unvote!!"});
-
+    return NextResponse.json({message: "ERROR: Could not unvote!!"}, {status:400});
 }
 
 

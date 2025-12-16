@@ -2,25 +2,26 @@ import { NextResponse } from "next/server";
 import { errorHandlerMiddleware } from '@services/middlewareHandlers/errorHandlerMiddleware';
 import {  GetUser,DeleteUser,SetAboutMe ,SetPfp ,SaveUserMediaInfo, GetUserMediaInfo} from '@utils/crud/user_crud';
 import cloudinary from '@services/cloudinary';
+import { auth } from '@services/auth';
 
-//used in testing before authentication
- const testEmail1 = 'JohnDoe@example.com';
- const testEmail2 = 'hamdahelal@forfun.com';
 
 async function get_Profile_Handler(request) {
-  const { searchParams } = new URL(request.url);
 
-  const email = testEmail2;
-  //get email from auth!!
+  const session = await auth();
+  if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const email = session.user.email; //get email from auth!!
   if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
   }
 
     //query db
-    const user = await GetUser(email);
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
+  const user = await GetUser(email);
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
     // Return the user object
     return NextResponse.json(user, { status: 200 });
 }
@@ -51,10 +52,14 @@ async function uploadToCloudinary(data){
 
 async function patch_Profile_Handler(request) {
 
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const formData = await request.formData();
     
 
-  let email = testEmail2; //get email from auth
+  let email = session.user.email; //get email from auth
   const aboutMe = formData.get("about_me");
   const media = formData.get("media");
 
@@ -75,24 +80,28 @@ async function patch_Profile_Handler(request) {
 
 async function delete_user(request) {
 
-    const { searchParams } = new URL(request.url);
-    let email = testEmail2; //get from auth 
-    if (!email) {
-      return NextResponse.json({ error: "Email is required" }, { status: 400 });
-    }
-    const mediaInfo = await GetUserMediaInfo(email);
-    if (mediaInfo && mediaInfo.public_id) {
-      try {
-        await cloudinary.uploader.destroy(mediaInfo.public_id);
-          console.log(`Deleted Cloudinary image: ${mediaInfo.public_id}`);
-      } catch (err) {
-          console.error("Failed to delete Cloudinary image:", err);
-          //delete the user anyway
-      }
-    }
-    await DeleteUser(email); //delete user from db
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-    return NextResponse.json({ success: true, message: "User and data deleted" });
+  let email = session.user.email; //get from auth 
+  if (!email) {
+    return NextResponse.json({ error: "Email is required" }, { status: 400 });
+  }
+  const mediaInfo = await GetUserMediaInfo(email);
+  if (mediaInfo && mediaInfo.public_id) {
+    try {
+      await cloudinary.uploader.destroy(mediaInfo.public_id);
+      console.log(`Deleted Cloudinary image: ${mediaInfo.public_id}`);
+    } catch (err) {
+      console.error("Failed to delete Cloudinary image:", err);
+      //delete the user anyway
+    }
+  }
+  await DeleteUser(email); //delete user from db
+
+  return NextResponse.json({ success: true, message: "User and data deleted" });
 
 }
 

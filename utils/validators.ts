@@ -15,7 +15,6 @@ export const postValidator = z.object({
     body: z.string().optional(),
     community_name: z.string().min(1).max(100),
    // picture_link: z.string().optional().nullable() //check what format to use for this field
-  
 });
 
 

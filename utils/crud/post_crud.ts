@@ -80,7 +80,7 @@ export async function UpdatePost(
         [   post_id, 
             user_email, 
             updates.title || null,
-            updates.body || null,
+            updates.body ?? null,
             updates.picture_link === undefined ? null : updates.picture_link
         ];
         const query = "SELECT * FROM update_post($1, $2, $3, $4, $5)";
@@ -143,13 +143,19 @@ export async function GetPersonalizedFeedForLoggedInUser(user_email: string):Pro
 
 
 /**
- * Deletes a post from the database.
+ * Deletes a post from the database, but only if the user owns it.
  *
  * @param post_id - The post ID.
+ * @param user_email - The email of the user attempting to delete.
+ * @returns A promise resolving to true if deleted, false if not owned or not found.
  */
-export async function DeletePost(post_id: number): Promise<void> {
+export async function DeletePost(post_id: number, user_email: string): Promise<boolean> {
     try {
-        await pool.query("SELECT delete_post($1)", [post_id]);
+        const result = await pool.query(
+            "SELECT delete_post($1, $2) AS success",
+            [post_id, user_email]
+        );
+        return result.rows[0].success ?? false;
     } catch (err) {
         console.error("Error deleting post:", err);
         throw err;

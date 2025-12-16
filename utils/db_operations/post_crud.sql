@@ -199,7 +199,11 @@ $$ LANGUAGE plpgsql;
 
 --  3)Get Personalized Feed (For Logged In Users) 
 
-CREATE OR REPLACE FUNCTION get_personalized_feed(p_user_email TEXT)
+CREATE OR REPLACE FUNCTION get_personalized_feed(
+    p_user_email TEXT,
+    p_limit INT,
+    p_cursor TIMESTAMP
+)
 RETURNS TABLE (
     post_id INT,
     user_email TEXT,
@@ -211,20 +215,33 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT p.post_id, p.user_email, p.community_name, p.title, p.body, p.picture_link, p.created_on
+    SELECT DISTINCT
+        p.post_id, 
+        p.user_email, 
+        p.community_name, 
+        p.title, 
+        p.body, 
+        p.picture_link, 
+        p.created_on
     FROM posts p
+    -- Join with joined_communities to filter relevant posts
+    LEFT JOIN joined_communities jc ON p.community_name = jc.community_name 
+    AND jc.user_email = p_user_email
     WHERE 
-        -- Condition 1: Post is in a community I have joined
-        p.community_name IN (
-            SELECT jc.community_name 
-            FROM joined_communities jc 
-            WHERE jc.user_email = p_user_email
+        (-- Condition 1: User is a member of the community
+            jc.community_name IS NOT NULL
+            OR 
+            -- Condition 2: Or user created the post themselves
+            p.user_email = p_user_email
         )
-        OR 
-        -- Condition 2: Or user created the post themselves (so user can see his own posts)
-        p.user_email = p_user_email
+        AND 
+        (p_cursor IS NULL 
+            OR 
+            -- Apply the same timezone logic as public feed
+            p.created_on < (p_cursor AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Cairo')
+        )
     ORDER BY p.created_on DESC
-    LIMIT 100;
+    LIMIT p_limit;
 END;
 $$ LANGUAGE plpgsql;
 

@@ -2,53 +2,69 @@ import { NextResponse } from "next/server";
 import { errorHandlerMiddleware } from '@services/middlewareHandlers/errorHandlerMiddleware';
 import {  VoteComment, GetCommentVotes, DeleteCommentVote} from '@utils/crud/comment_crud';
 import {votesValidator} from '@utils/validators';
+import { auth } from '@services/auth';
 
 
-//used in testing before authentication
-const testEmail1 = 'JohnDoe@example.com';
-const testEmail2 = 'hamdahelal@forfun.com';
 
 async function Get_Comment_Votes(request, context){
     const {params} = await context;
     const { commentId } = await params;
     const numericId = Number(commentId); 
-    if (!Number.isInteger(numericId)) {
-        // bad request
+    if (!commentId || !Number.isInteger(numericId)) {
         return NextResponse.json({ message: "ERROR: ID is not an Integer!!" }, { status: 400 });
     }
     const votes = await GetCommentVotes(numericId);
-    return NextResponse.json(votes);
+    return NextResponse.json(votes || 0); //retrun 0 or total votes
 
 }
 
 
 async function Patch_Vote_Handler(request, context) {
+    //authorize user 
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const email = session.user.email;
+
     const { params } = await context;
     const { commentId } = await params;
     const numericId = Number(commentId);
+    //valiadate id 
+    if (!commentId || !Number.isInteger(numericId)) {
+        return NextResponse.json({ message: "Invalid Comment ID" }, { status: 400 });
+    }
 
     const data = await request.json(); //get data from frontend
     
     //validate input
-    const partialValidator = votesValidator.partial();
-    const validVote = partialValidator.parse(data);
+    const partialValidator = votesValidator.pick({ flag: true }); //validate only the flag 
+    const validVote = partialValidator.parse(data); //error it catches is caught by middleware handler
 
-    if (!validVote) {
-        return NextResponse.json({ error: validVote.error }, { status: 400 }); //bad request!!
-    }
-
-    await VoteComment(testEmail1, numericId, validVote.flag); //query db
+    await VoteComment(email, numericId, validVote.flag); //query db
     return NextResponse.json({ message: "Vote added successfully" });
 }
 
 //for unvoting
 async function Delete_Vote_Handler(request, context) {
+    //authorize user 
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const email = session.user.email;
+
     const { params } = await context;
     const { commentId } = await params;
     const numericId = Number(commentId);
+    //validate id!!
+    if (!commentId || !Number.isInteger(numericId)) {
+        return NextResponse.json({ message: "Invalid Comment ID" }, { status: 400 });
+    }
 
-    // unvote for the current user
-    await DeleteCommentVote(testEmail1, numericId);
+
+    // unvote for the current user (no rows would be affected if user has no vote on comment!!)
+    await DeleteCommentVote(email, numericId);
 
     return NextResponse.json({ message: "Vote removed" });
 }
