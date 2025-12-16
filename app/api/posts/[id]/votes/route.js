@@ -1,37 +1,66 @@
 import { NextResponse } from "next/server";
 import { errorHandlerMiddleware } from '@services/middlewareHandlers/errorHandlerMiddleware';
-//dummy data to simulate posts
-import { mockData } from '@services/mockData';
+import {GetPostVotes, VotePost, DeleteVote} from '@utils/crud/post_crud';
+import {votesValidator} from '@utils/validators';
+
+//used in testing before authentication
+const testEmail1 = 'JohnDoe@example.com';
+const testEmail2 = 'hamdahelal@forfun.com';
 
 /*
 do i delete only the whole votes or 
 */
 
-//get all upvotes and downvotes on a post
- async function get_Votes_Handler(request , { params }){
+//get total votes on a post
+ async function get_Post_Votes_Handler(request , { params }){
 
     const { id } = await params;
-    //query db for that post id (up votes table and down votes table)
-    let upVotes = mockData.PostUpvotes.filter( p => String(p.postID) === String(id));
-    let downVote = mockData.PostDownvotes.filter( p => String(p.postID) === String(id));
+    //make sure post id is a number/int
+    const numericId = parseInt(Number(id));
+    if(numericId){ 
+        const votes = await GetPostVotes(numericId);
+        return NextResponse.json({ message: "successfull votes fetching",totalVotes: votes});
+    }
+    else if(!numericId){
+        //id is not numeric 
+        return NextResponse.json({ message: "ERROR: not valid post ID " }, { status: 400 });
+    }
 
-    if(!((upVotes.length)&&(downVote.length))){return NextResponse.json({ message: "No votes for this post found!!" }, { status: 404 });}//no votes found
-
-    return NextResponse.json({ message: "successfull votes fetching",
-        upVotes: `${upVotes}`, downVotes: `${downVote}`});
+}
+//vote a specific post 
+async function vote_Patch_Handler(request, context){
+    const { params } = await context;
+    const { id } = await params;
+    const voteData = await request.json();
+    voteData.post_id = Number(id);
+    //make sure post id is a number/int
+    const validatedVoteData = votesValidator.parse(voteData);
+    if(validatedVoteData){
+       await  VotePost(testEmail1,validatedVoteData.post_id,validatedVoteData.flag); //query db
+        return NextResponse.json({ message: "Vote added successfully."});
+    }
+    return NextResponse.json({message: "ERROR voting!!"},{status: 400});
 
 }
 
+/*
+  does this even needs implementation ??
+*/
 
-
-//delete all votes of a post thats gonna be deleted 
+//delete a vote of a post by a user
  async function delete_Votes_Handler (request , { params }){
 
     const { id } = await params;
-    //delete from db when connected !! 
+    const postId = Number(id);
+    if(postId){
+        DeleteVote(testEmail1,postId);//query db 
+        return NextResponse.json({message: "succesfull unvote!!"});
+    }
+    return NextResponse.json({message: "ERROR: Could not unvote!!"});
+
 }
 
 
-export const GET = errorHandlerMiddleware(get_Votes_Handler);
-
+export const GET = errorHandlerMiddleware(get_Post_Votes_Handler);
+export const PATCH = errorHandlerMiddleware(vote_Patch_Handler);
 export const DELETE = errorHandlerMiddleware( delete_Votes_Handler);

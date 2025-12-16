@@ -10,7 +10,7 @@ import pool, {Comment} from "../interfaces";
  */
 export async function CreateComment(
     user_email: string,
-    post_id: string,
+    post_id: number,
     body: string,
 ): Promise<number> {
     try {
@@ -18,7 +18,7 @@ export async function CreateComment(
             "SELECT create_comment($1, $2, $3) AS comment_id",
             [user_email, post_id, body]
         );
-        return result.rows[0].post_id;
+        return result.rows[0].comment_id;
     } catch (err) {
         console.error("Error creating comment:", err);
         throw err;
@@ -74,6 +74,36 @@ export async function DeleteComment(comment_id: number): Promise<void> {
     }
 }
 
+export async function DeleteAllPostComments(post_id: number):Promise<void>{
+    try{
+        const data = [post_id];
+        const query = "SELECT delete_post_comments($1)";
+        await pool.query(query,data);
+    }catch(error){
+        console.error("Error deleting all post's comments:", error);
+        throw error;
+    }
+}
+
+//update a comment given its id and comment auother email for validation
+export async function UpdateComment(commentId: number, userEmail: string, newBody: string):Promise<void>{
+    try {
+        const query = "SELECT * FROM update_comment($1, $2, $3)";      
+        const result = await pool.query(query, [
+            commentId, 
+            userEmail, 
+            newBody
+        ]);
+        // if rows[0] is undefined, it means no update happened 
+        //meaning: (either ID was wrong or user wasn't the owner)
+        return result.rows[0] || null;
+
+    } catch (err) {
+        console.error("Error updating comment:", err);
+        throw err;
+    }
+}
+
 /**
  * Likes or dislikes a comment.
  * If they try to vote the same way twice, it removes their vote.
@@ -95,6 +125,32 @@ export async function VoteComment(
         );
     } catch (err) {
         console.error("Error voting on comment:", err);
+        throw err;
+    }
+}
+
+//get comment votes
+export async function GetCommentVotes(commentId: number) {
+    try {
+        const result = await pool.query(
+            "SELECT * FROM get_comment_votes($1)", 
+            [commentId]
+        );
+        return result.rows;
+    } catch (err) {
+        console.error("Error getting comment votes:", err);
+        throw err;
+    }
+}
+
+export async function DeleteCommentVote(user_email: string, comment_id: number): Promise<void> {
+    try {
+        await pool.query(
+            "SELECT delete_comment_vote($1, $2)", 
+            [user_email, comment_id]
+        );
+    } catch (err) {
+        console.error("Error deleting comment vote:", err);
         throw err;
     }
 }

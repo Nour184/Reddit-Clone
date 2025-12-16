@@ -1,5 +1,6 @@
 import pool, {Post} from "../interfaces";
 
+const LIMIT_DEFAULT = 8; //######### change 3 to 8
 /**
  * Creates a new post in the database.
  *
@@ -49,20 +50,97 @@ export async function GetPost(post_id: number): Promise<Post | null> {
 }
 
 /**
- * Gets all posts inside a community.
+ * get posts inside a community using a cursor for pagination
+ *
+ * @param community_name - The community name.
+ * @param limit - number of posts to fetch
+ * @param cursor - the cursor timestamp to fetch posts created before that timestamp
  */
-export async function GetCommunityPosts(community_name: string): Promise<Post[]> {
+export async function GetCommunityPosts(community_name: string, limit: number = LIMIT_DEFAULT, cursor: string | null ): Promise<Post[]> {
     try {
-        const result = await pool.query(
-            "SELECT * FROM get_community_posts($1)",
-            [community_name]
-        );
-        return result.rows;
+        const safeLimit = limit || LIMIT_DEFAULT;
+        const values = [community_name, safeLimit, cursor];
+        const query = "SELECT * FROM get_community_posts($1,$2,$3)";
+        const data = await pool.query(query,values);
+        return data.rows;
     } catch (err) {
         console.error("Error getting community posts:", err);
         throw err;
     }
 }
+/* 
+*/
+export async function UpdatePost(
+    post_id: number,
+    user_email: string,
+    updates: { title?: string; body?: string; picture_link?: string | null }
+    ): Promise<Post[]> {
+    try{
+        const values = 
+        [   post_id, 
+            user_email, 
+            updates.title || null,
+            updates.body || null,
+            updates.picture_link === undefined ? null : updates.picture_link
+        ];
+        const query = "SELECT * FROM update_post($1, $2, $3, $4, $5)";
+        const data = await pool.query(query,values);
+        return data.rows[0] || null;  //return null incase user doesnt even own the post
+    }catch(error){
+        console.error("Error updating post:", error);
+        throw error;
+    }
+}
+
+/*
+  get all posts created by user
+ */
+export async function GetPostsCreatedByUser( user_email: string, limit: number = LIMIT_DEFAULT, cursor: string | null):Promise<Post[]>{
+    try{
+        const safeLimit = limit || LIMIT_DEFAULT;
+        const values = [user_email, safeLimit, cursor];
+        const query = "SELECT * FROM get_user_posts($1,$2,$3)";
+        const data = await pool.query(query,values);
+        return data.rows
+
+    }catch(error){
+        console.error("Error getting posts created by user:", error);
+        throw error;
+    }
+}
+
+/*
+  gonna return posts for the feed using a cursor starting with 
+  the newly added posts(with most recent timestamp)
+ NOTE: limit is defaulted to 8 for later!!
+
+ ###### DONT FORGET TO RETURN THE LIMIT DEFAI=ULT VALUE TO 8 AGAIN LATER!!
+*/                                        
+export async function GetPublicFeedPosts( limit: number = LIMIT_DEFAULT, cursor: string | null ):Promise<Post[]> {
+    try {
+        const safeLimit = limit || LIMIT_DEFAULT; 
+        const query = "SELECT * FROM get_public_feed($1, $2)";
+        const val = [safeLimit, cursor];
+        const res = await pool.query(query,val);
+        return res.rows;
+    }catch(error){
+        console.error("Error getting public feed posts:", error);
+        throw error;
+    }
+}
+
+export async function GetPersonalizedFeedForLoggedInUser(user_email: string):Promise<Post[]>{
+        try {
+        const result = await pool.query("SELECT * FROM get_personalized_feed($1)", [user_email]);
+        return result.rows
+    }catch(error){
+        console.error("Error getting personalized feed posts:", error);
+        throw error;
+    }
+}
+
+
+
 
 /**
  * Deletes a post from the database.
@@ -121,4 +199,37 @@ export async function GetPostVotes(
         console.error("Error getting post votes:", err);
         throw err;
     }
+}
+
+//to unvote a post
+export async function DeleteVote(userEmail: string, postId: number): Promise<void> {
+    try {
+        // use SELECT to call the function because it returns void
+        await pool.query("SELECT delete_vote($1, $2)", [userEmail, postId]);
+    } catch (err) {
+        console.error("Error deleting vote:", err);
+        throw err;
+    }
+}
+
+//for the post media public ip in cloudinary
+export async function SavePostMediaInfo(postId: number, publicId: string): Promise<void> {
+    const query = `
+        INSERT INTO post_media_info (post_id, public_id)
+        VALUES ($1, $2)
+        ON CONFLICT (post_id) 
+        DO UPDATE SET public_id = $2;
+    `;
+    await pool.query(query, [postId, publicId]);
+}
+
+//get the Public ID for a specific post
+export async function GetPostMediaInfo(postId: number): Promise<{ public_id: string } | undefined> {
+    const query = `
+        SELECT public_id 
+        FROM post_media_info 
+        WHERE post_id = $1
+    `;
+    const res = await pool.query(query, [postId]);
+    return res.rows[0]; // Returns { public_id: '...' } or undefined if no image exists
 }

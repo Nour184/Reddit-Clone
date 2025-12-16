@@ -12,6 +12,13 @@
       "node",
       "jest"
     ],
+    //  Set the base directory to the root of your project
+    "baseUrl": ".",
+
+    "paths": {
+      "@services/*": ["services/*"],
+      "@utils/*": ["utils/*"]
+    },
     // For nodejs:
     // "lib": ["esnext"],
     // "types": ["node"],

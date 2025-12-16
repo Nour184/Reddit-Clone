@@ -1,193 +1,169 @@
-// THIS IS CALLED BY THE FRONTEND TO FETCH ALL POSTS FOR EXAMPLE FOR THE HOME FEED !!
 import { NextResponse } from "next/server";
 import { errorHandlerMiddleware } from '@services/middlewareHandlers/errorHandlerMiddleware';
-//import { responseMiddleware } from '@services/middlewareHandlers/responseMiddleware';
-//dummy data to simulate posts
-import { mockData } from '@services/mockData';
+import { feedPaginationValidator, postValidator } from '@utils/validators';
+import { GetAllCommunities , CreateCommunity , GetCommunity } from '@utils/crud/community_crud';
+import {CreatePost ,GetCommunityPosts,
+    GetPostsCreatedByUser, GetPublicFeedPosts,
+    GetPersonalizedFeedForLoggedInUser , SavePostMediaInfo} from '@utils/crud/post_crud';
+import cloudinary from '@services/cloudinary';
 
+//used in testing before authentication
+ const testEmail1 = 'JohnDoe@example.com';
+ const testEmail2 = 'hamdahelal@forfun.com';
 
 //GET method
 //get all posts 1) for a normal feed to a specific user , 2) for a specific community 
 // , 3) the posts created by that user only 
- async function get_Posts_Handler(request){
-    //=========================MOCKSSSS REMOVE ITTT=====================================\\
-    const loggedINUser = true;
-    const loggedInUserEmail = 'alice@user.com';
-    let filter = {};
-
-
-        const url = new URL(request.url);
-        const communityName = url.searchParams.get('communityName');
-        const userMail = url.searchParams.get('author');
-
-      // Filter 1: Get posts for a specific Community (e.g., /api/posts?communityName=r/NextjsDevs)
-      if(communityName){ filter.communityName = communityName;}
-
-      // Filter 2: Get posts by a specific Author (e.g., /api/posts?author=alice@user.com)
-      if(userMail){filter.UserMail = userMail;}
-
-      // Filter 3: Default Feed Logic (e.g., /api/posts)....we can personalize this feed with some logic 
-      // If no specific filter is applied, you can personalize the default feed.
-  // else {
-  //   // Example: Show posts from communities the loggedInUserEmail has joined
-  //   // (Requires fetching the joined list from your JoinedCommunity model)
-  //   // filter.communityName = { $in: [list of joined communities] };
-  // }
-       else{
-    // This requires simulating the JOIN operation to get the list of community names.
-    // Find all communities the user has joined:
-    const joinedCommunitiesList = mockData.JoinedCommunities
-      .filter(join => join.userEmail === loggedInUserEmail)
-      .map(join => join.communityName);
+ async function get_Posts_Handler(request,response){
     
-    if (joinedCommunitiesList.length > 0) {
-        // Add the $in operator to the filter object (MongoDB logic simulation)
-        // This tells the database: 'communityName' must be IN the list provided.
-        filter.communityName = { $in: joinedCommunitiesList };
-     }
+    let isLoggedInUser = true; //hard coded just for testing !!
+    const loggedInUser = testEmail1; //hard coded just for testing !!
+    
+    const url = new URL(request.url);
+    const communityName = url.searchParams.get('communityName');
+    const myPosts = url.searchParams.has('myPosts');
+    const cursor = url.searchParams.get('cursor');
+    let posts = {}; //posts to be returned
+    let nextCursor = null;//cursor to be retunrd
+
+    //************************************validate pagination params********************************//
+    //let the limit = 8 for now (its default value)
+    const limit = 3; //######change to 8 again later!!
+    let  validLimit,validCursor ;
+    try{
+        const validatedParams = feedPaginationValidator.parse({limit,cursor: cursor || undefined});
+        validLimit = validatedParams.limit;
+        validCursor = validatedParams.cursor || null;
+    }catch(error){
+        console.log("data validation error",error);
+    }
+
+    //************************************logic to fetch posts**************************************//
+
+    //fetch public feed posts for not logged in users
+    if(!isLoggedInUser){         
+        //TODO:
+        //need to validate the limit(if gonna be even passed) and the cursor they pass!!
+        //use feedPaginationValidator() from validation file
+        //let the limit = 8 for now (its default value)
+        posts = await GetPublicFeedPosts(validLimit +1 ,validCursor); //+1 to check if there are new posts to return
+
+        if(posts.length > validLimit){ 
+           posts.pop();  //remove last post since it exists
+           const lastPost = posts[posts.length - 1];        
+           nextCursor = lastPost.created_on; //set cursor to the last post created_on timestamp
+        }
+        else{ 
+            //leave nextCursor = null -> to make sure infinite scrolling works right 
+            nextCursor = null;
+        }
+    }
+
+    /*
+      TODO:
+      implement GetPersonalizedFeedForLoggedInUser() in crud operations with cursor style pagination
+    */
+    //else if(isLoggedInUser){
+    //    posts = await GetPersonalizedFeedForLoggedInUser(loggedInUser);
+    //}
+    /*
+      TODO:
+      implement GetCommunityPosts() in crud operations with cursor style pagination 
+    */
+    else if(communityName /*&& isLoggedInUser*/){
+        //get posts for that specific community
+        posts = await GetCommunityPosts(communityName, validLimit ,validCursor); 
+        const lastPost = posts[posts.length -1];
+        nextCursor = lastPost? lastPost.created_on : null; //set cursor to timestamp that posts will be fetched with next
+    }
+    /*frontend should pass the user email that they want to fetch their posts
+      (as they dont have to be the loggedInUser butt just a normal user)
+      TODO:
+      see how do i get the user email from the frontend in a secure way!!
+      also implement GetPostsCreatedByUser() in crud operations with cursor style pagination
+    */
+    else if (myPosts /*&& isLoggedInUser*/){       
+        console.log("the problem is caught it !!!!!"); 
+        posts = await GetPostsCreatedByUser(loggedInUser,validLimit,validCursor);
+        const  lastPost = posts[posts.length -1];
+        nextCursor = lastPost? lastPost.created_on : null; //set cursor to timestamp that posts will be fetched with next
+    }
+
+    else if(!myPosts){ 
+        console.log("caught it !!!!!");
     }
 
     
-   // 4. Apply the constructed filter to the entire dataset (simulating the DB query)
-   let finalPosts = mockData.Posts;
-
-   if (Object.keys(filter).length > 0) {
-    // Filter the mock data based on the properties in the 'filter' object.
-    finalPosts = finalPosts.filter(post => {
-        
-        // 1. Check for filtering by a specific Author (Scenario 2)
-        // If filter.userEmail exists, the post's email must match.
-        if (filter.UserMail && post.userEmail !== filter.UserMail) {
-            return false;
+    //return the posts fetched
+    return NextResponse.json({
+        FeedData: posts,
+        meta: {
+        nextCursor: nextCursor
         }
-
-        // 2. Check for filtering by Community (Scenarios 1 & 3)
-        if (filter.communityName) {
-            const communityFilter = filter.communityName;
-
-            // If it's a simple string, it's Scenario 1 (Equality check)
-            if (typeof communityFilter === 'string') {
-                if (post.communityName !== communityFilter) return false;
-            } 
-            
-            // If it's an object with $in, it's Scenario 3 (Array inclusion check)
-            else if (communityFilter['$in']) {
-                // Check if the post's communityName is NOT included in the $in array.
-                if (!communityFilter['$in'].includes(post.communityName)) return false;
-            }
-        }
-        
-        // If the post passes all checks, include it.
-        return true;
     });
-    }
-    finalPosts.sort((a, b) => b.createdAt - a.createdAt);
-    
-    // 4. Execute the flexible MongoDB query      <<<<=============== UNCOMMENT when database Models are available!!
-    //const posts = await PostModel.find(filter) // Use the constructed filter
-    //.select('title body userEmail communityName voteScore')
-    //.sort({ createdAt: -1 }) //show the newest first!!!
-    //.limit(50);
-
-      return NextResponse.json(finalPosts);
-
 }
 
-//helper function <----------ALERT!!!!! DELETE IT WHEN USING vod LIB !!!!!
-function validatePostCreation(postInfo){
-  
- // ALERT!!!! am i responsile for handling the the posts id here or what exactly does it et incremented on its own !!
-    
-
-    //*******************required fields validation******************\
-    if (!(postInfo.userEmail)|| !(postInfo.communityName) || !(postInfo.title) || !(postInfo.body)) {
-        console.error("Validation Error: Missing required fields (userEmail, communityName, title, body).");
-        return false;
-    }
-
-    //**********************email validation****************************\
-    if (typeof (postInfo.userEmail) !== 'string') {
-        console.error("Validation Error: userEmail must be a string.");
-        return false;
-    }
-    // Basic regex pattern for email format (not exhaustive, but good start)
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test((postInfo.userEmail))) {
-        console.error("Validation Error: Invalid userEmail format.");
-        return false;
-    }
-
-    //*******************community name validation **************************\
-    if (typeof (postInfo.communityName) !== 'string') {
-        console.error("Validation Error: communityName must be a string.");
-        return false;
-    }
-    // Allows letters, numbers, and underscores/hyphens.
-    const communityRegex = /^r\/[a-zA-Z0-9_-]+$/;
-    if (!communityRegex.test((postInfo.communityName))) {
-        console.error("Validation Error: communityName must start with 'r/' and contain valid characters.");
-        return false;
-    }
-
-    //******************title validation***************************\
-    if (typeof (postInfo.title) !== 'string') {
-        console.error("Validation Error: title must be a string.");
-        return false;
-    }
-    // Check length constraints (e.g., min 5, max 300)
-    if ((postInfo.title).length < 5 || (postInfo.title).length > 300) {
-        console.error("Validation Error: Title must be between 5 and 300 characters.");
-        return false;
-    }
-    //********************body validation***************************\
-    if (typeof (postInfo.body) !== 'string') {
-        console.error("Validation Error: body must be a string.");
-        return false;
-    }
-    // Check length constraints (e.g., min 10, max 40,000)
-    if ((postInfo.body).length < 10 || (postInfo.body).length > 40000) {
-        console.error("Validation Error: Body must be between 10 and 40,000 characters.");
-        return false;
-    }
-
-    //************************picture link validation****************\
-    if (postInfo.pictureLink !== null && typeof postInfo.pictureLink !== 'undefined') {
-        if (typeof postInfo.pictureLink !== 'string') {
-            console.error("Validation Error: pictureLink must be a string or null.");
-            return false;
-        }
-    }
-    //if data is validated
-    return true;
-}
-
-
-//POST method --> to create a new post
- async function post_Posts_Handler(request){
- 
-        //get the body of the request msg 
-        const postInfo = await request.json();
-        if(!validatePostCreation(postInfo)){
-            //for invalid data!!
-          return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
-        }
-    
-        const newPost = {
-            postID :'post-103', //hardcoded just for testing purposes !!
-            userEmail: postInfo.userEmail,
-            communityName: postInfo.communityName,
-            title: postInfo.title,
-            body: postInfo.body,
-            pictureLink: postInfo.pictureLink,
-            createdAt: new Date()
-        }
-        mockData.Posts.push(newPost); //ALERT!!!((DONT FORGET THIS PART WHEN DB IS READY!!!!!!!!!!!!!!!!))
-        //if valid add the new post to db  ALERT!!!((DONT FORGET THIS PART WHEN DB IS READY!!!!!!!!!!!!!!!!))
-
-        return NextResponse.json(newPost, { status: 201 }); //assume success msg is 201
+//helper to upload to cloudinary
+async function uploadToCloudinary(data){
+    const arrayBuffer = await data.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    return new Promise((resolve, reject) => {
+    cloudinary.uploader.upload_stream(
+      { 
+        folder: "reddit-demo-posts",
+        resource_type: "auto" //Auto-detect if image or video
+      }, 
+      (error, result) => {
+        if (error) reject(error);
+        else resolve({
+          url: result.secure_url,
+          public_id: result.public_id, //get media public ip
+          type: result.resource_type // Returns 'image' or 'video'
+        });
+      }
+    ).end(buffer);
+  });
 
 }
+//TODO: add authentication just to get user email!! 
+//POST method --> to create a new post (returns the  id of the created post)
+ async function post_Posts_Handler(request,response){
 
+    const postInfo = await request.formData();
+
+    const community_name = postInfo.get("community_name");
+    const title = postInfo.get("title");
+    const body = postInfo.get("body");
+    const media = postInfo.get("media");
+    const data_to_be_validated = {community_name,title,body};
+
+    const validPostInfo = postValidator.parse(data_to_be_validated); //validate incoming post data 
+
+    //check if community exists!!
+    let communityExists = await GetCommunity(validPostInfo.community_name);
+    if (!communityExists) {
+        return NextResponse.json({ message: "Community not found!" }, { status: 404 });
+    }
+    let mediaUrl = null;
+    let mediaPublicId = null;
+
+    if (media && media.size > 0) {
+      // Call uploader helper
+      console.log("uploading now....");
+      const uploadResult = await uploadToCloudinary(media);  
+
+      mediaUrl = uploadResult.url; //return this to frontend and save it in db
+      mediaPublicId = uploadResult.public_id;
+    }
+    //if exists and data is validated create post
+    const newPost = await CreatePost( testEmail1, validPostInfo.community_name, validPostInfo.title, validPostInfo.body,mediaUrl);
+    //save the media public ip in db 
+    if (mediaPublicId && newPost && newPost.post_id) {
+      await SavePostMediaInfo(newPost.post_id, mediaPublicId);
+   } 
+    return NextResponse.json(newPost, { status: 201 });
+
+}
 
 export const GET = errorHandlerMiddleware(get_Posts_Handler);
 
