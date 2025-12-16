@@ -144,4 +144,23 @@ export async function DeleteUser(email: string): Promise<void> {
     }
 }
 
+
+
+export async function SaveUserMediaInfo(email: string, publicId: string): Promise<void> {
+    const query = `
+        INSERT INTO user_media_info (user_email, public_id)
+        VALUES ($1, $2)
+        ON CONFLICT (user_email) 
+        DO UPDATE SET public_id = $2;
+    `;
+    await pool.query(query, [email, publicId]);
+}
+
+
+export async function GetUserMediaInfo(email: string): Promise<{ public_id: string } | undefined> {
+    const query = `SELECT public_id FROM user_media_info WHERE user_email = $1`;
+    const res = await pool.query(query, [email]);
+    return res.rows[0];
+}
+
 export default pool;

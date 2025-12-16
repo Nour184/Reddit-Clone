@@ -5,6 +5,7 @@ import { GetAllCommunities , CreateCommunity , GetCommunity } from '@utils/crud/
 import {CreatePost ,GetCommunityPosts,
     GetPostsCreatedByUser, GetPublicFeedPosts,
     GetPersonalizedFeedForLoggedInUser} from '@utils/crud/post_crud';
+import cloudinary from '@services/cloudinary';
 
 //used in testing before authentication
  const testEmail1 = 'JohnDoe@example.com';
@@ -102,28 +103,59 @@ import {CreatePost ,GetCommunityPosts,
     });
 }
 
+//helper to upload to cloudinary
+async function uploadToCloudinary(data){
+    const arrayBuffer = await data.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    return new Promise((resolve, reject) => {
+    cloudinary.uploader.upload_stream(
+      { 
+        folder: "reddit-demo-posts",
+        resource_type: "auto" //Auto-detect if image or video
+      }, 
+      (error, result) => {
+        if (error) reject(error);
+        else resolve({
+          url: result.secure_url,
+          type: result.resource_type // Returns 'image' or 'video'
+        });
+      }
+    ).end(buffer);
+  });
 
-/*
-stuff to be made :
-1)validate  incoming post data    (DONE)
-2)check if the community exists before creating the post  (DONE)
-3)authentication to get the email of user creating the post      <-----------totty hay3mlha
-*/ 
+}
+//TODO: add authentication just to get user email!! 
 //POST method --> to create a new post (returns the  id of the created post)
  async function post_Posts_Handler(request,response){
 
-    const postInfo = await request.json();
-    const validPostInfo = postValidator.parse(postInfo); //validate incoming post data 
+    const postInfo = await request.formData();
 
-    //first check the existance of the community
+    const community_name = postInfo.get("community_name");
+    const title = postInfo.get("title");
+    const body = postInfo.get("body");
+    const media = postInfo.get("media");
+    const data_to_be_validated = {community_name,title,body}
+
+    const validPostInfo = postValidator.parse(data_to_be_validated); //validate incoming post data 
+
+    //check if community exists!!
     let communityExists = await GetCommunity(validPostInfo.community_name);
-    if(!communityExists){ return NextResponse.json({ message: "No Post with this ID found!!" }, { status: 404 }); }
+    if (!communityExists) {
+        return NextResponse.json({ message: "Community not found!" }, { status: 404 });
+    }
+
+    if (media && media.size > 0) {
+            // Call uploader helper
+            console.log("uploading now....");
+            const uploadResult = await uploadToCloudinary(media);  
+
+            mediaUrl = uploadResult.url; //return this to frontend and save it in db
+        }
     //if exists and data is validated create post
-    const newPost = await CreatePost( testEmail2, validPostInfo.community_name, validPostInfo.title, validPostInfo.body, validPostInfo.picture_link);
+    const newPost = await CreatePost( testEmail2, validPostInfo.community_name, validPostInfo.title, validPostInfo.body,mediaUrl);
     return NextResponse.json(newPost, { status: 201 });
 
 }
-
 
 export const GET = errorHandlerMiddleware(get_Posts_Handler);
 

@@ -163,4 +163,19 @@ CREATE TABLE comment_votes (
         ON DELETE CASCADE
 );
 
+
+//************************extra 2 tables to carry profile and posts media public ips from cloudinary
+-- For User Profile Pics
+CREATE TABLE user_media_info (
+    user_email TEXT PRIMARY KEY REFERENCES users(user_email) ON DELETE CASCADE,
+    public_id TEXT NOT NULL
+);
+
+-- For Post Media
+CREATE TABLE post_media_info (
+    post_id INT PRIMARY KEY REFERENCES posts(post_id) ON DELETE CASCADE,
+    public_id TEXT NOT NULL
+);
+
+
 */
