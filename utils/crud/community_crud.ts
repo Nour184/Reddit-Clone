@@ -36,13 +36,24 @@ export async function GetCommunity(name: string) {
 // =============================
 // READ all communities
 // =============================
-export async function GetAllCommunities() {
+export async function GetAllCommunities(
+  searchTerm: string | null,
+  limit: number,
+  offset: number
+) {
   const result = await pool.query(`
     SELECT * FROM communities
-    ORDER BY created_on DESC;
-  `);
+    WHERE 
+        ($1::text IS NULL OR 
+         name ILIKE '%' || $1 || '%' OR 
+         description ILIKE '%' || $1 || '%')
+    ORDER BY created_on DESC
+    LIMIT $2 OFFSET $3
+  `, [searchTerm, limit, offset]);
+
   return result.rows;
 }
+
 // =============================
 // UPDATE Community
 // =============================
@@ -76,3 +87,4 @@ export async function DeleteCommunity(name: string) {
   const result = await pool.query(query, [name]);
   return result.rows[0]; // returns deleted row
 }
+

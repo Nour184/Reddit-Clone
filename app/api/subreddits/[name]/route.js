@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { errorHandlerMiddleware } from "../../../../services/middlewareHandlers/errorHandlerMiddleware.js";
-import { GetAllCommunities, DeleteCommunity } from "@/utils/crud/community_crud.js";
+import { GetCommunity, DeleteCommunity, UpdateCommunity } from "../../../../utils/crud/community_crud.ts";
+import { IsAdmin } from "../../../../utils/crud/community_admin_CRUD.ts";
+import { auth } from "../../../../services/auth.js";
 
 async function get_community(request, { params }) {
     const { name } = await params;
-    const communities = GetAllCommunities();
 
-    const community = communities.find(c => c.name === name);
+    const community = await GetCommunity(name);
     if (!community) {
         return NextResponse.json({ error: "Community not found" }, { status: 404 });
     }
@@ -14,40 +15,45 @@ async function get_community(request, { params }) {
     return NextResponse.json(community, { status: 200 });
 }
 
-// TODO: add a security layer to delete_community
-/*
-    Authentication (only logged-in users)
-    Authorization (only community creator can delete)
-*/
 async function delete_community(request, { params }) {
-    const { name } = await params;
-    const communities = GetAllCommunities();
+    const session = await auth();
+    if (!session?.user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    const community = communities.find(c => c.name === name);
+    const { name } = await params;
+
+    const community = await GetCommunity(name);
     if (!community) {
         return NextResponse.json({ error: "Community not found" }, { status: 404 });
     }
 
-    await DeleteCommunity(name); // Community Deletion cascades to posts
+    if (community.community_owner !== session.user.email) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    await DeleteCommunity(name);
 
     return NextResponse.json({ message: "Community deleted successfully" }, { status: 200 });
 }
 
-// TODO: add a security layer to patch_community
-/*
-    Authentication (only logged-in users)
-    Authorization (only community creator or moderators can edit)
-    Input validation (string length, URL format, etc.)
-*/
 async function patch_community(request, { params }) {
+    const session = await auth();
+    if (!session?.user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { name } = await params;
     const { description, communityPhotoLink } = await request.json();
 
-    const communities = await GetAllCommunities();
-
-    const community = communities.find(c => c.name === name);
+    const community = await GetCommunity(name);
     if (!community) {
         return NextResponse.json({ error: "Community not found" }, { status: 404 });
+    }
+
+    const isAdmin = await IsAdmin(session.user.email, name);
+    if (community.community_owner !== session.user.email && !isAdmin) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     if (description) {
@@ -55,10 +61,10 @@ async function patch_community(request, { params }) {
     }
 
     if (communityPhotoLink) {
-        community.communityPhotoLink = communityPhotoLink;
+        community.community_photo_link = communityPhotoLink;
     }
 
-    await UpdateCommunity(name, community.description, community.communityPhotoLink);
+    await UpdateCommunity(name, community.description, community.community_photo_link);
 
     return NextResponse.json(community, { status: 200 });
 }
