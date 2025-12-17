@@ -88,3 +88,17 @@ export async function DeleteCommunity(name: string) {
   return result.rows[0]; // returns deleted row
 }
 
+
+// =============================
+// Get communities owned by user
+// =============================
+export async function GetOwnedCommunities(ownerEmail: string) {
+  const query = `
+    SELECT * FROM communities
+    WHERE community_owner = $1
+    ORDER BY created_on DESC;
+  `;
+
+  const result = await pool.query(query, [ownerEmail]);
+  return result.rows;
+}

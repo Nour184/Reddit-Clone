@@ -1,6 +1,6 @@
-import { errorHandlerMiddleware } from "../../../../services/middlewareHandlers/errorHandlerMiddleware.js";
-import { auth } from "../../../../services/auth.js";
-import { GetJoinedCommunities } from "../../../../utils/crud/joined_communities_CRUD.ts";
+import { errorHandlerMiddleware } from "@services/middlewareHandlers/errorHandlerMiddleware";
+import { auth } from "@services/auth";
+import { GetJoinedCommunities } from "@utils/crud/joined_communities_CRUD";
 import { NextResponse } from "next/server";
 
 async function get_memberships(request) {
