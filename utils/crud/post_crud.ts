@@ -129,10 +129,13 @@ export async function GetPublicFeedPosts( limit: number = LIMIT_DEFAULT, cursor:
     }
 }
 
-export async function GetPersonalizedFeedForLoggedInUser(user_email: string):Promise<Post[]>{
+//left cursor as an input incase i will leave the frontend specify it themselves!!
+export async function GetPersonalizedFeedForLoggedInUser(user_email: string, limit: number = LIMIT_DEFAULT, cursor: string | null):Promise<Post[]>{
         try {
-        const result = await pool.query("SELECT * FROM get_personalized_feed($1)", [user_email]);
-        return result.rows
+        const safeLimit = limit || LIMIT_DEFAULT; 
+        const val = [user_email,safeLimit ,cursor];
+        const result = await pool.query("SELECT * FROM get_personalized_feed($1,$2,$3)", val);
+        return result.rows;
     }catch(error){
         console.error("Error getting personalized feed posts:", error);
         throw error;
