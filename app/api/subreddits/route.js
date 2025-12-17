@@ -17,6 +17,7 @@ import { auth } from "../../../services/auth";
 
 async function post_community(request) {
     const session = await auth();
+    console.log(session);
     if (!session?.user) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

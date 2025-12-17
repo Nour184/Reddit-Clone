@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { errorHandlerMiddleware } from "../../../../../services/middlewareHandlers/errorHandlerMiddleware.js";
-import { GetCommunity } from "../../../../../utils/crud/community_crud.ts";
-import { GetNumberOfMembers } from "../../../../../utils/crud/joined_communities_CRUD.ts";
+import { errorHandlerMiddleware } from "@services/middlewareHandlers/errorHandlerMiddleware";
+import { GetCommunity } from "@utils/crud/community_crud";
+import { GetNumberOfMembers } from "@utils/crud/joined_communities_CRUD";
 
 async function get_number_of_members(request, { params }) {
     const { name } = await params;

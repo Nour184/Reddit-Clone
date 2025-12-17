@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { errorHandlerMiddleware } from "../../../../services/middlewareHandlers/errorHandlerMiddleware.js";
-import { auth } from "../../../../services/auth.js";
-import { GetCommunity } from "../../../../utils/crud/community_crud.ts";
-import { LeaveCommunity, IsUserJoined } from "../../../../utils/crud/joined_communities_CRUD.ts";
+import { errorHandlerMiddleware } from "../../../../../services/middlewareHandlers/errorHandlerMiddleware.js";
+import { auth } from "../../../../../services/auth.ts";
+import { GetCommunity } from "../../../../../utils/crud/community_crud.ts";
+import { LeaveCommunity, IsUserJoined } from "../../../../../utils/crud/joined_communities_CRUD.ts";
 
 async function leave_community(request, { params }) {
     const session = await auth();
