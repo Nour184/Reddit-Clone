@@ -4,11 +4,11 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Settings, Share2, Plus, MoreHorizontal, Cake, MessageSquare, Award, Flame } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { getSession } from "@/lib/session";
-import FeedCard from "@/components/shared/FeedCard/index";
+import { Button } from "components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "components/ui/avatar";
+import { getSession } from "lib/session";
+import FeedCard from "components/shared/FeedCard/index";
 
 export default function UserProfilePage() {
     const params = useParams();

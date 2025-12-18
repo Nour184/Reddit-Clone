@@ -4,13 +4,13 @@
 import Link from "next/link";
 import Image from "next/image";
 import { MessageSquare, Share2, Bookmark, MoreHorizontal, ExternalLink } from "lucide-react";
-import VoteButtons from "@/components/post/VoteButtons/index.jsx";
-import UserAvatar from "@/components/user/UserAvatar/index.jsx";
-import TimeAgo from "@/components/shared/TimeAgo/index.jsx";
-import CommunityInfo from "@/components/subreddit/Sidebar/CommunityInfo/index.jsx";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import VoteButtons from "components/post/VoteButtons/index.jsx";
+import UserAvatar from "components/user/UserAvatar/index.jsx";
+import TimeAgo from "components/shared/TimeAgo/index.jsx";
+import CommunityInfo from "components/subreddit/Sidebar/CommunityInfo/index.jsx";
+import { Button } from "components/ui/button";
+import { Card } from "components/ui/card";
+import { cn } from "lib/utils";
 
 export default function PostCard({
   id,

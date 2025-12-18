@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Button } from "components/ui/button";
+import { Card } from "components/ui/card";
 import { Sparkles, Loader2, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "lib/utils";
 
 export default function AISummarizeButton({ title, content, className }) {
     const [summary, setSummary] = useState(null);

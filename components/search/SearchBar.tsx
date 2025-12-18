@@ -3,11 +3,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Search, X, Clock } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { fetchSearchResults, fetchCommunities, fetchProfiles } from "@/lib/search";
-import { dummyRecentSearches } from "@/lib/dummyPosts";
-import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "components/ui/input";
+import { fetchSearchResults, fetchCommunities, fetchProfiles } from "lib/search";
+import { dummyRecentSearches } from "lib/dummyPosts";
+import { cn } from "lib/utils";
+import { Avatar, AvatarFallback } from "components/ui/avatar";
 
 interface SearchResult {
     id: string;
@@ -245,7 +245,7 @@ export default function SearchBar() {
                         {/* Loading / No Results fallback for actual search */}
                         {query && isLoading && (
                             <div className="px-4 py-3 text-center text-sm text-muted-foreground">
-                                Looking for "{query}"...
+                                Looking for &#34;{query}&#34;...
                             </div>
                         )}
                         {query && !isLoading && results.length === 0 && communities.length === 0 && profiles.length === 0 && (

@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import VoteButtons from "@/components/post/VoteButtons";
-import AISummarizeButton from "@/components/post/AISummarizeButton";
+import { Card } from "components/ui/card";
+import { Button } from "components/ui/button";
+import { Separator } from "components/ui/separator";
+import VoteButtons from "components/post/VoteButtons";
+import AISummarizeButton from "components/post/AISummarizeButton";
 import {
     MessageSquare,
     Share,
@@ -18,9 +18,9 @@ import {
     Video
 } from "lucide-react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
-import CollapsibleThread from "@/components/comments/CollapsibleThread";
-import { getComments, addComment } from "@/lib/comment-store";
+import { cn } from "lib/utils";
+import CollapsibleThread from "components/comments/CollapsibleThread";
+import { getComments, addComment } from "lib/comment-store";
 
 export default function PostDetailPage() {
     const params = useParams();

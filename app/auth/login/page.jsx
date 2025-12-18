@@ -4,9 +4,9 @@ import { useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, X } from "lucide-react";
-import FloatingLabelInput from "@/components/shared/FloatingLabelInput";
-import { Button } from "@/components/ui/button";
-import { setSession } from "@/lib/session";
+import FloatingLabelInput from "components/shared/FloatingLabelInput";
+import { Button } from "components/ui/button";
+import { setSession } from "lib/session";
 
 
 export default function LoginPage() {

@@ -4,8 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, X, Check } from "lucide-react";
-import FloatingLabelInput from "@/components/shared/FloatingLabelInput";
-import { Button } from "@/components/ui/button";
+import FloatingLabelInput from "components/shared/FloatingLabelInput";
+import { Button } from "components/ui/button";
 
 export default function ForgotPasswordPage() {
     const router = useRouter();

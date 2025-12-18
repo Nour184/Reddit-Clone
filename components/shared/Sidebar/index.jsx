@@ -2,12 +2,12 @@
 
 // components/shared/Sidebar/index.jsx
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button } from "components/ui/button";
 import { Home, TrendingUp, Plus, ChevronUp, ChevronDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "lib/utils";
 import { useState, useEffect } from "react";
-import { getSession } from "@/lib/session";
-import { getJoinedCommunities, getAllCommunities } from "@/lib/community-store";
+import { getSession } from "lib/session";
+import { getJoinedCommunities, getAllCommunities } from "lib/community-store";
 
 // Initial popular communities (fallback)
 const DEFAULT_POPULAR = [

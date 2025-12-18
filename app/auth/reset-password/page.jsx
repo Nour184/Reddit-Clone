@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import FloatingLabelInput from "@/components/shared/FloatingLabelInput";
-import { Button } from "@/components/ui/button";
+import FloatingLabelInput from "components/shared/FloatingLabelInput";
+import { Button } from "components/ui/button";
 
 export default function ResetPasswordPage() {
     const router = useRouter();

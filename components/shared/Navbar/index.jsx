@@ -5,10 +5,10 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
-import SearchBar from "@/components/search/SearchBar";
-import { getSession, removeSession } from "@/lib/session";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import SearchBar from "components/search/SearchBar";
+import { getSession, removeSession } from "lib/session";
+import { Button } from "components/ui/button";
+import { Input } from "components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,10 +16,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+} from "components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "components/ui/avatar";
 import { Search, Home, MessageSquare, Bell, Plus, ChevronDown, LogIn, User, FileText, Settings, LogOut, Moon, Sun, Image as ImageIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "lib/utils";
 
 // Mock user (replace with real auth later)
 

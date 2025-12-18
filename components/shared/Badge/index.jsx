@@ -1,5 +1,5 @@
 // components/shared/Badge/index.jsx
-import { cn } from "@/lib/utils";
+import { cn } from "lib/utils";
 
 /**
  * Badge Component

@@ -1,4 +1,4 @@
-import FeedCard from '@/components/shared/FeedCard/index';
+import FeedCard from '../components/shared/FeedCard/index';
 
 export default function Home() {
   // Dummy post DATA (not React components)

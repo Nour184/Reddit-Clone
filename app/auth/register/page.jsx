@@ -4,8 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, RefreshCw } from "lucide-react";
-import FloatingLabelInput from "@/components/shared/FloatingLabelInput";
-import { Button } from "@/components/ui/button";
+import FloatingLabelInput from "components/shared/FloatingLabelInput";
+import { Button } from "components/ui/button";
 
 export default function RegisterPage() {
     const router = useRouter();

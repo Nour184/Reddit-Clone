@@ -3,11 +3,11 @@
 // components/profile/ProfileHeader.jsx
 import { useState } from "react";
 import { Calendar, Trophy, MessageSquare, ArrowUp, ArrowDown } from "lucide-react";
-import UserAvatar from "@/components/user/UserAvatar/index.jsx";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import Badge from "@/components/shared/Badge/index.jsx";
-import { cn } from "@/lib/utils";
+import UserAvatar from "components/user/UserAvatar/index.jsx";
+import { Button } from "components/ui/button";
+import { Card } from "components/ui/card";
+import Badge from "components/shared/Badge/index.jsx";
+import { cn } from "lib/utils";
 
 /**
  * ProfileHeader Component

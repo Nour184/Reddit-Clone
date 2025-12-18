@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { createCommunity } from "@/lib/community-store";
+import { Button } from "components/ui/button";
+import { Input } from "components/ui/input";
+import { Textarea } from "components/ui/textarea";
+import { createCommunity } from "lib/community-store";
 import { Info } from "lucide-react";
-import { getSession } from "@/lib/session";
+import { getSession } from "lib/session";
 
 export default function CreateCommunityPage() {
     const router = useRouter();

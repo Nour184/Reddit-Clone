@@ -2,7 +2,7 @@
 
 // components/shared/ShareDropdown/index.jsx
 import { Share2, Link as LinkIcon, Twitter, Facebook, Copy, Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,9 +10,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "components/ui/dropdown-menu";
 import { useState } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "lib/utils";
 
 /**
  * ShareDropdown Component

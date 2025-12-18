@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import SubredditHeader from "@/components/subreddit/SubredditHeader";
-import FeedCard from "@/components/shared/FeedCard/index";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import SubredditHeader from "components/subreddit/SubredditHeader";
+import FeedCard from "components/shared/FeedCard/index";
+import { Card } from "components/ui/card";
+import { Button } from "components/ui/button";
 import { Flame, TrendingUp, Clock, ArrowUpDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "lib/utils";
 import Link from 'next/link';
-import { getCommunity } from "@/lib/community-store";
+import { getCommunity } from "lib/community-store";
 
 function formatMembers(count) {
     if (typeof count === 'number') {

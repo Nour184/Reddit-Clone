@@ -4,11 +4,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { MessageSquare, Share2, MoreHorizontal, Reply } from "lucide-react";
-import VoteButtons from "@/components/post/VoteButtons/index.jsx";
-import UserAvatar from "@/components/user/UserAvatar/index.jsx";
-import TimeAgo from "@/components/shared/TimeAgo/index.jsx";
-import ShareDropdown from "@/components/post/ShareDropdown/index.jsx";
-import { Button } from "@/components/ui/button";
+import VoteButtons from "components/post/VoteButtons/index.jsx";
+import UserAvatar from "components/user/UserAvatar/index.jsx";
+import TimeAgo from "components/shared/TimeAgo/index.jsx";
+import ShareDropdown from "components/post/ShareDropdown/index.jsx";
+import { Button } from "components/ui/button";
 import { cn } from "@/lib/utils";
 import CommentForm from "./CommentForm";
 
