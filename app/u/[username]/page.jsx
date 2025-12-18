@@ -27,37 +27,11 @@ export default function UserProfilePage() {
 
     const [userPosts, setUserPosts] = useState([]);
 
+    // Posts fetching is now handled by FeedCard with myPosts prop
     useEffect(() => {
-        if (typeof window === 'undefined') return;
-
-        try {
-            const localPosts = JSON.parse(localStorage.getItem('posts') || '[]');
-            // Filter posts by author
-            // Handle legacy "CurrentUser" if viewing own profile? No, fix data going forward.
-            // But if I want to see my old posts, I might not match.
-            // Let's match strict username.
-            const filtered = localPosts.filter(p =>
-                (p.author || "").toLowerCase() === routerUsername.toLowerCase()
-            ).map(p => ({
-                id: p.id,
-                title: p.title,
-                content: p.content,
-                author: { username: p.author, avatar: user.avatar }, // Use current user avatar for now
-                community: p.community || { name: "u/" + p.author, href: `/u/${p.author}` },
-                votes: p.upvotes || 0,
-                comments: p.comments || 0,
-                createdAt: p.createdAt,
-                href: p.community ? `/r/${p.community.name}/post/${p.id}` : `/u/${p.author}/post/${p.id}`,
-                type: p.type,
-                media: p.media
-            }));
-
-            filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            setUserPosts(filtered);
-        } catch (e) {
-            console.error("Error loading user posts", e);
-        }
-    }, [routerUsername, user]);
+        // We still check localStorage for old posts if any, but FeedCard handles the live ones
+        setUserPosts([]);
+    }, [routerUsername]);
 
     return (
         <div className="container max-w-[1200px] mx-auto py-4">
@@ -89,10 +63,10 @@ export default function UserProfilePage() {
 
                         {/* Content Area */}
                         <TabsContent value="overview">
-                            {userPosts.length > 0 ? <FeedCard postList={userPosts} /> : <EmptyState user={user} />}
+                            {isOwnProfile ? <FeedCard postList={userPosts} myPosts={true} /> : <EmptyState user={user} />}
                         </TabsContent>
                         <TabsContent value="posts">
-                            {userPosts.length > 0 ? <FeedCard postList={userPosts} /> : <EmptyState user={user} type="posts" />}
+                            {isOwnProfile ? <FeedCard postList={userPosts} myPosts={true} /> : <EmptyState user={user} type="posts" />}
                         </TabsContent>
                         <TabsContent value="comments"><EmptyState user={user} type="comments" /></TabsContent>
                     </Tabs>

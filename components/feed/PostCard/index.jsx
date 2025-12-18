@@ -10,7 +10,7 @@ import TimeAgo from "components/shared/TimeAgo/index.jsx";
 import CommunityInfo from "components/subreddit/Sidebar/CommunityInfo/index.jsx";
 import { Button } from "components/ui/button";
 import { Card } from "components/ui/card";
-import { cn } from "lib/utils";
+import { cn } from "lib/utils"; 
 
 export default function PostCard({
   id,

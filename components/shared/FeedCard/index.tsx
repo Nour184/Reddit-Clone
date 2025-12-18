@@ -32,38 +32,78 @@ interface Post {
     className?: string;
 }
 
-export default function FeedCard({ postList }: { postList: Post[] }) {
+interface FeedCardProps {
+    postList: Post[];
+    communityName?: string;
+    myPosts?: boolean;
+}
+
+export default function FeedCard({ postList, communityName, myPosts }: FeedCardProps) {
     const [posts, setPosts] = useState(postList);
     const [isLoading, setIsLoading] = useState(false);
-    const loaderRef = useRef(null);
+    const [nextCursor, setNextCursor] = useState<string | null>(null);
+    const [hasMore, setHasMore] = useState(true);
+    const loaderRef = useRef<HTMLDivElement>(null);
 
     // Sync state with props (e.g. when parent loads data)
     useEffect(() => {
         setPosts(postList);
+        // If the parent passed an empty list, trigger initial load
+        if (postList.length === 0) {
+            setHasMore(true);
+        } else {
+            // We don't know the cursor from props yet, so we assume more exists
+            setHasMore(true);
+        }
     }, [postList]);
 
-    // Fake API fetch (replace with real API)
     const loadMore = async () => {
-        if (isLoading) return;
+        if (isLoading || !hasMore) return;
         setIsLoading(true);
 
-        // Simulate network delay
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        try {
+            const url = new URL('/api/posts', window.location.origin);
+            if (nextCursor) url.searchParams.set('cursor', nextCursor);
+            if (communityName) url.searchParams.set('communityName', communityName);
+            if (myPosts) url.searchParams.set('myPosts', 'true');
 
-        const newPosts: Post[] = [
-            { id: Date.now() + 1, title: "More Post " + (posts.length + 1), content: "More content" },
-            { id: Date.now() + 2, title: "More Post " + (posts.length + 2), content: "More content" },
-        ];
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Failed to fetch posts");
 
-        setPosts((prev) => [...prev, ...newPosts]);
-        setIsLoading(false);
+            const data = await response.json();
+
+            if (data.FeedData && data.FeedData.length > 0) {
+                const mappedPosts: Post[] = data.FeedData.map((p: any) => ({
+                    id: p.post_id,
+                    title: p.title,
+                    content: p.body,
+                    imageUrl: p.picture_link,
+                    author: { username: p.username || p.user_email },
+                    community: { name: p.community_name },
+                    votes: p.votes || 0,
+                    comments: p.comment_count || 0,
+                    createdAt: p.created_on,
+                    href: `/r/${p.community_name}/post/${p.post_id}`
+                }));
+
+                setPosts((prev) => [...prev, ...mappedPosts]);
+                setNextCursor(data.meta.nextCursor);
+                setHasMore(!!data.meta.nextCursor);
+            } else {
+                setHasMore(false);
+            }
+        } catch (error) {
+            console.error("Failed to load posts:", error);
+            setHasMore(false);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     useEffect(() => {
         const observer = new IntersectionObserver(
             (entries) => {
-                const first = entries[0];
-                if (first.isIntersecting) {
+                if (entries[0]?.isIntersecting && !isLoading) {
                     loadMore();
                 }
             },
@@ -82,10 +122,38 @@ export default function FeedCard({ postList }: { postList: Post[] }) {
         };
     }, [posts.length, isLoading]);
 
+    const handlePostVote = async (postId: string | number, newVoteState: "up" | "down" | null) => {
+        try {
+            if (newVoteState === 'up') {
+                await fetch(`/api/posts/${postId}/votes`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ flag: 1 })
+                });
+            } else if (newVoteState === 'down') {
+                await fetch(`/api/posts/${postId}/votes`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ flag: -1 })
+                });
+            } else {
+                await fetch(`/api/posts/${postId}/votes`, {
+                    method: 'DELETE'
+                });
+            }
+        } catch (err) {
+            console.error("Failed to vote:", err);
+        }
+    };
+
     return (
-        <div>
+        <div className="space-y-4">
             {posts.map((p) => (
-                <PostCard key={p.id} {...p as any} />
+                <PostCard
+                    key={p.id}
+                    {...p as any}
+                    onVote={(newVote: "up" | "down" | null) => handlePostVote(p.id, newVote)}
+                />
             ))}
 
             <div ref={loaderRef} className="h-10 flex justify-center items-center py-4 text-sm text-muted-foreground">
