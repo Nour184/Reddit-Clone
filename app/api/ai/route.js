@@ -1,7 +1,7 @@
-import { errorHandlerMiddleware } from "../../../services/middlewareHandlers/errorHandlerMiddleware";
+import { errorHandlerMiddleware } from "@services/middlewareHandlers/errorHandlerMiddleware";
 import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
-import { GetPost } from "../../../utils/crud/post_crud";
+import { GetPost } from "@utils/crud/post_crud";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
