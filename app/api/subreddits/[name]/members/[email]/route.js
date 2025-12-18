@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { errorHandlerMiddleware } from "../../../../services/middlewareHandlers/errorHandlerMiddleware.js";
-import { auth } from "../../../../services/auth.js";
-import { GetCommunity } from "../../../../utils/crud/community_crud.ts";
-import { IsAdmin, AddAdmin, RemoveAdmin } from "../../../../utils/crud/community_admin_CRUD.ts";
+import { errorHandlerMiddleware } from "@services/middlewareHandlers/errorHandlerMiddleware";
+import { auth } from "@services/auth";
+import { GetCommunity } from "@utils/crud/community_crud";
+import { IsAdmin, AddAdmin, RemoveAdmin } from "@utils/crud/community_admin_CRUD";
+import { IsUserJoined } from "@utils/crud/joined_communities_CRUD";
 
 async function toggle_admin(request, { params }) {
     const session = await auth();
@@ -19,6 +20,11 @@ async function toggle_admin(request, { params }) {
 
     if (community.community_owner !== session.user.email) {
         return NextResponse.json({ error: "You are not the owner of this community" }, { status: 400 });
+    }
+
+    const isMember = await IsUserJoined(email, name);
+    if (!isMember) {
+        return NextResponse.json({ error: "User is not a member of this community" }, { status: 400 });
     }
 
     const isMemberAdmin = await IsAdmin(email, name);

@@ -2,39 +2,55 @@ import { errorHandlerMiddleware } from "../../../services/middlewareHandlers/err
 import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import { GetPost } from "../../../utils/crud/post_crud";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 
 const ai = new GoogleGenAI({
     apiKey: process.env.GOOGLE_API_KEY
 });
 
-const rateLimitStore = new Map(); // for rate limiting (prevent abuse)
+function getClientIp(request) {
+    const forwardedFor = request.headers.get("x-forwarded-for");
 
+    if (forwardedFor) {
+        return forwardedFor.split(",")[0].trim();
+    }
+
+    if (request.ip) {
+        return request.ip;
+    }
+
+    return "local";
+}
 
 async function summarize_post(request) {
     const postID = request.nextUrl.searchParams.get("postID");
 
-    const ip = request.headers.get("x-forwarded-for") || "local";
+    const ratelimit = new Ratelimit({
+        redis: Redis.fromEnv(),
+        limiter: Ratelimit.slidingWindow(3, "1 m"),
+        analytics: true,
+    });
 
-    const now = Date.now();
-    const windowMs = 60 * 1000; // 1 minute
-    const limit = 3; // 3 request/min
+    const { success, limit, reset } = await ratelimit.limit(
+        `api:ai:${getClientIp(request)}`
+    );
 
-    if (!rateLimitStore.has(ip)) rateLimitStore.set(ip, []);
-
-    const timestamps = rateLimitStore.get(ip).filter(ts => now - ts < windowMs);
-
-    if (timestamps.length >= limit) {
+    if (!success) {
+        const remaining = (reset - Date.now()) / 1000;
         return NextResponse.json(
-            { error: "Rate limit exceeded. Try again later." },
+            { error: `Rate limit ${limit} exceeded. Try again in ${remaining} seconds.` },
             { status: 429 }
         );
     }
 
-    timestamps.push(now);
-    rateLimitStore.set(ip, timestamps);
-
     if (!postID) {
         return NextResponse.json({ error: "postID is required" }, { status: 400 });
+    }
+
+    const postIDInt = Number(postID);
+    if (!Number.isInteger(postIDInt)) {
+        return NextResponse.json({ error: "postID must be an integer" }, { status: 400 });
     }
 
     const post = await GetPost(postID);
