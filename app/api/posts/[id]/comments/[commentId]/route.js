@@ -34,18 +34,25 @@ import { auth } from '@services/auth';
     const email = session.user.email;
     const { params } = await context;
     const { commentId } = await params;
+    const numericId = Number(commentId);
     const commentUpdates = await request.json(); //get data to update 
     //validate new comment updates (body and postid)
     const partialCommentValidator = commentsValidator.partial();
-    const validatedData = partialCommentValidator.parse(commentUpdates);
+    const validationResult = partialCommentValidator.safeParse(commentUpdates);
 
-    const numericId = Number(commentId);  
-    if(validatedData){
-        const updatedComment = await UpdateComment(numericId,email,validatedData.body)
-        if(updatedComment){
-            return NextResponse.json(updatedComment);//return comment after modifications
-        } 
-    }//no comment found
+    //handle zod errors
+    if (!validationResult.success) {
+        return NextResponse.json({
+            error: "Invalid input",
+            issues: validationResult.error.flatten().fieldErrors,
+        }, { status: 400 });
+    }
+    const validatedData = validationResult.data;
+    const updatedComment = await UpdateComment(numericId, email, validatedData.body);
+
+    if (updatedComment) {
+        return NextResponse.json(updatedComment); //return the updated comment object
+    }
 
     return NextResponse.json({ message: "No comment with this id found to modify!!" }, { status: 404 });//else no comment found
 }
@@ -69,7 +76,11 @@ async function delete_Comment_Handler(request, { params }) {
     }
     //check if the comment is owned by this user
     const comment = await GetComment(numericId);
-    if(comment.user_email === email){
+    if (!comment) {                               //if no comment found!!
+    return NextResponse.json({ message: "Comment not found" }, { status: 404 });
+    }
+
+    if(comment.user_email === email){  //check if comment belongs to user S
         //perform deletetion
         await DeleteComment(numericId);
         return NextResponse.json({

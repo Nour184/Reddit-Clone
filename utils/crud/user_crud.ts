@@ -163,6 +163,12 @@ export async function GetUserMediaInfo(email: string): Promise<{ public_id: stri
     return res.rows[0];
 }
 
+//clear the row that belongs to that user email 
+export async function ClearUserMediaInfo(email: string): Promise<void> {
+    // Directly delete the row because the user is not using Cloudinary anymore
+    await pool.query("DELETE FROM user_media_info WHERE user_email = $1", [email]);
+}
+
 /**
  * Checks if username is available.
  * 

@@ -36,13 +36,20 @@ async function vote_Patch_Handler(request, context){
     const { id } = await params;
     const voteData = await request.json();
     voteData.post_id = Number(id);
-    //make sure post id is a number/int
-    const validatedVoteData = votesValidator.parse(voteData);
-    if(validatedVoteData){
-       await  VotePost(email,validatedVoteData.post_id,validatedVoteData.flag); //query db
-        return NextResponse.json({ message: "Vote added successfully."});
+    //make sure post id is a number(int)
+    const validationResult = votesValidator.safeParse(voteData);
+
+    //return Zod errors
+    if (!validationResult.success) {
+        return NextResponse.json({
+            error: "Invalid input",
+            issues: validationResult.error.flatten().fieldErrors, // Returns error messages
+        }, { status: 400 });
     }
-    return NextResponse.json({message: "ERROR voting!!"},{status: 400});
+    const validData = validationResult.data;
+    await VotePost(email, validData.post_id, validData.flag); // query db
+
+    return NextResponse.json({ message: "Vote added successfully." });
 
 }
 

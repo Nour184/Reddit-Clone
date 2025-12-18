@@ -44,8 +44,14 @@ import { auth } from '@services/auth';
     
     const newCommentData = await request.json();
     //validate comment data 
-    const bodyValidator = commentsValidator.pick({ body: true }); //choose to validate only the body of teh comment!!
-    const validatedData = bodyValidator.parse(newCommentData);
+    const bodyValidator = commentsValidator.pick({ body: true }); //choose to validate body of the comment only
+    const validationResult = bodyValidator.safeParse(newCommentData);
+
+    if (!validationResult.success) { //return validation errors 
+        return NextResponse.json({error: "Invalid input",issues: validationResult.error.flatten().fieldErrors}, 
+        { status: 400 });
+    }
+    const validatedData = validationResult.data; //validated data returned from zod
     //Create Comment
     const commentId = await CreateComment(email, numericId, validatedData.body);
 

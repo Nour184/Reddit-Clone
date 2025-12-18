@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { errorHandlerMiddleware } from '@services/middlewareHandlers/errorHandlerMiddleware';
-import {  GetUser,DeleteUser,SetAboutMe ,SetPfp ,SaveUserMediaInfo, GetUserMediaInfo} from '@utils/crud/user_crud';
+import {  GetUser,DeleteUser,SetAboutMe ,SetPfp ,SaveUserMediaInfo,ClearUserMediaInfo, GetUserMediaInfo} from '@utils/crud/user_crud';
+import {profileValidator} from '@utils/validators';
 import cloudinary from '@services/cloudinary';
 import { auth } from '@services/auth';
 
@@ -60,21 +61,63 @@ async function patch_Profile_Handler(request) {
     
 
   let email = session.user.email; //get email from auth
-  const aboutMe = formData.get("about_me");
+  const aboutMe_to_be_validated = formData.get("about_me");
   const media = formData.get("media");
 
   if (!email) return NextResponse.json({ error: "Email required" }, { status: 400 });
 
-  if (aboutMe !== null) await SetAboutMe(email, aboutMe);
-  if (media && media.size > 0) {
+  const dataToValidate = {
+      about_me: aboutMe_to_be_validated === null ? undefined : aboutMe_to_be_validated
+  };
+  const validationResult = profileValidator.safeParse(dataToValidate); //validate using zod
 
-    console.log("uploading now....");
-    const uploadResult = await uploadToCloudinary(media); 
-  
-    await SetPfp(email, uploadResult.url);
-    await SaveUserMediaInfo(email, uploadResult.public_id);//update public id of photo
+  if (!validationResult.success) { //return zod errors
+    return NextResponse.json({
+      error: "Invalid input",
+      issues: validationResult.error.flatten().fieldErrors
+    }, { status: 400 });
   }
-  return NextResponse.json({ success: true });
+  const validData = validationResult.data; //valid data
+  if (validData.about_me !== undefined) {  //if about me is present query db
+    await SetAboutMe(email, validData.about_me); //query db
+  }  
+
+//media logic
+ if (media) {
+    // CLEANUP: Delete the OLD image from Cloudinary first.
+    //do it whether the new media is a hard file OR a URL string.
+    const oldMediaInfo = await GetUserMediaInfo(email);
+
+    if (oldMediaInfo && oldMediaInfo.public_id) {
+        console.log("Found old Cloudinary image. Deleting:", oldMediaInfo.public_id);
+        try {
+            await cloudinary.uploader.destroy(oldMediaInfo.public_id);
+        } catch (err) {
+            console.error("Failed to delete old image from Cloudinary:", err);
+            //continue anyway so the users profile still updates
+        }
+    }
+
+    //handle the new media 
+    if (typeof media === 'object' && media.size > 0) {
+        //SCENARIO 1: its a file upload 
+        console.log("File detected. Uploading to Cloudinary...");
+        
+        const uploadResult = await uploadToCloudinary(media);
+        await SetPfp(email, uploadResult.url);
+        // Save the new Public ID so we can delete it later
+        await SaveUserMediaInfo(email, uploadResult.public_id);
+
+    } else if (typeof media === 'string' && media.startsWith('http')) {
+        //SCENARIO 2:frontend sends URL String
+        console.log("URL string detected. Saving directly to DB...");
+        
+        await SetPfp(email, media);
+        //remove old public_id from the database
+        await ClearUserMediaInfo(email);
+    }
+  }
+  return NextResponse.json({ message: "Successful profile update" });
 }
 
 
@@ -99,9 +142,12 @@ async function delete_user(request) {
       //delete the user anyway
     }
   }
+
+  await ClearUserMediaInfo(email); //delete user entry(if present) in the user_media_info table
+
   await DeleteUser(email); //delete user from db
 
-  return NextResponse.json({ success: true, message: "User and data deleted" });
+  return NextResponse.json({ success: true, message: "User and data deleted successfully" });
 
 }
 

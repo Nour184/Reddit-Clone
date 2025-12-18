@@ -62,11 +62,24 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION delete_post(p_post_id INT)
-RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION delete_post(p_post_id INT, p_user_email TEXT)
+RETURNS BOOLEAN AS $$
+DECLARE
+    v_rows_deleted INT;
 BEGIN
+    -- Attempt to delete the post where ID and Owner match
     DELETE FROM posts
-    WHERE post_id = p_post_id;
+    WHERE post_id = p_post_id AND user_email = p_user_email;
+
+    -- Check how many rows were actually deleted (0 or 1)
+    GET DIAGNOSTICS v_rows_deleted = ROW_COUNT;
+
+    -- Return TRUE if a row was deleted, FALSE if not (unauthorized or not found)
+    IF v_rows_deleted > 0 THEN
+        RETURN TRUE;
+    ELSE
+        RETURN FALSE;
+    END IF;
 END;
 $$ LANGUAGE plpgsql;
 

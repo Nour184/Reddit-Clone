@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { errorHandlerMiddleware } from '@services/middlewareHandlers/errorHandlerMiddleware';
 import { feedPaginationValidator, postValidator } from '@utils/validators';
-import { GetAllCommunities , CreateCommunity , GetCommunity } from '@utils/crud/community_crud';
+import { GetCommunity } from '@utils/crud/community_crud';
 import {CreatePost ,GetCommunityPosts,
     GetPostsCreatedByUser, GetPublicFeedPosts,
-    GetPersonalizedFeedForLoggedInUser , SavePostMediaInfo} from '@utils/crud/post_crud';
+    GetPersonalizedFeedForLoggedInUser , SavePostMediaInfo,
+    ClearPostMediaInfo} from '@utils/crud/post_crud';
 import cloudinary from '@services/cloudinary';
 
 import { auth } from '@services/auth';
@@ -105,39 +106,57 @@ async function uploadToCloudinary(data){
     }
     const email = session.user.email;
 
-    const postInfo = await request.formData();
+    const postInfo = await request.formData(); //get the data sent 
 
     const community_name = postInfo.get("community_name");
     const title = postInfo.get("title");
     const body = postInfo.get("body")|| undefined;
-    const media = postInfo.get("media");
+    const media = postInfo.get("media");  //this can be a file or a string for the link directly
     const data_to_be_validated = {community_name,title,body};
 
-    const validPostInfo = postValidator.parse(data_to_be_validated); //validate incoming post data 
+    const validationResult = postValidator.safeParse(data_to_be_validated); //validate incoming post data 
+    if (!validationResult.success) { //return error msgs from zod if violation found!!
+      return NextResponse.json(
+      { error: "Invalid input",
+        issues: validationResult.error.flatten().fieldErrors,},{ status: 400 });
+    }
 
-    //check if community exists!!
+    const validPostInfo = validationResult.data;
+    //check if community even exists!!
     let communityExists = await GetCommunity(validPostInfo.community_name);
     if (!communityExists) {
-        return NextResponse.json({ message: "Community not found!" }, { status: 404 });
+      return NextResponse.json({ message: "Community not found!" }, { status: 404 });
     }
+
+    //*******************************media logic********************************\\
     let mediaUrl = null;
     let mediaPublicId = null;
 
-    if (media && media.size > 0) {
-      // Call uploader helper
-      console.log("uploading now....");
-      const uploadResult = await uploadToCloudinary(media);  
-
-      mediaUrl = uploadResult.url; //return this to frontend and save it in db
-      mediaPublicId = uploadResult.public_id;
+    if (media) {
+      //case 1: file upload
+      if (typeof media === 'object' && media.size > 0) {
+        console.log("File detected. Uploading to Cloudinary...");
+        const uploadResult = await uploadToCloudinary(media);
+            
+        mediaUrl = uploadResult.url;
+        mediaPublicId = uploadResult.public_id;
+      } 
+        //case 2: url string
+      else if (typeof media === 'string' && media.startsWith('http')) { //check if its a valid url (starts with http)
+        console.log("URL string detected. Using directly...");
+        mediaUrl = media;
+        // no public_id for external urls saved (they need to be handled by frontend)
+      }
     }
-    //if exists and data is validated create post
+
+    //if community exists and data is validated create post
     const newPost = await CreatePost( email, validPostInfo.community_name, validPostInfo.title, validPostInfo.body,mediaUrl);
+
     //save the media public ip in db
-    if (mediaPublicId && newPost ) {
-      await SavePostMediaInfo(newPost, mediaPublicId);
-   } 
-   return NextResponse.json({  //return succ msgS
+  if (mediaPublicId && newPost ) {
+    await SavePostMediaInfo(newPost, mediaPublicId);
+  } 
+  return NextResponse.json({  //return succ msgS
     post_id: newPost,
     message: "Post created successfully" }, { status: 201 });
 

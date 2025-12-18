@@ -240,5 +240,15 @@ export async function GetPostMediaInfo(postId: number): Promise<{ public_id: str
         WHERE post_id = $1
     `;
     const res = await pool.query(query, [postId]);
-    return res.rows[0]; // Returns { public_id: '...' } or undefined if no image exists
+    return res.rows[0]; //returns undefined if no image exists
+}
+
+//delete the post's media info (public_id) from the database
+export async function ClearPostMediaInfo(post_id: number): Promise<void> {
+    try {
+        await pool.query("DELETE FROM post_media_info WHERE post_id = $1", [post_id]);
+    } catch (err) {
+        console.error("Error clearing post media info:", err);
+        throw err;
+    }
 }

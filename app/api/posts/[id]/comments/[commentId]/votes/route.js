@@ -14,7 +14,7 @@ async function Get_Comment_Votes(request, context){
         return NextResponse.json({ message: "ERROR: ID is not an Integer!!" }, { status: 400 });
     }
     const votes = await GetCommentVotes(numericId);
-    return NextResponse.json(votes || 0); //retrun 0 or total votes
+    return NextResponse.json({ VoteCount: (votes || 0) }); //retrun 0 or total votes
 
 }
 
@@ -38,9 +38,16 @@ async function Patch_Vote_Handler(request, context) {
     const data = await request.json(); //get data from frontend
     
     //validate input
-    const partialValidator = votesValidator.pick({ flag: true }); //validate only the flag 
-    const validVote = partialValidator.parse(data); //error it catches is caught by middleware handler
-
+    const partialValidator = votesValidator.pick({ flag: true });
+    const validationResult = partialValidator.safeParse(data);
+    const validVote = validationResult.data;
+    //handle zod errors
+    if (!validationResult.success) {
+        return NextResponse.json({
+            error: "Invalid input",
+            issues: validationResult.error.flatten().fieldErrors, // returns custom msg: "Vote flag must be either 1 or -1"
+        }, { status: 400 });
+    }
     await VoteComment(email, numericId, validVote.flag); //query db
     return NextResponse.json({ message: "Vote added successfully" });
 }
@@ -61,7 +68,6 @@ async function Delete_Vote_Handler(request, context) {
     if (!commentId || !Number.isInteger(numericId)) {
         return NextResponse.json({ message: "Invalid Comment ID" }, { status: 400 });
     }
-
 
     // unvote for the current user (no rows would be affected if user has no vote on comment!!)
     await DeleteCommentVote(email, numericId);
