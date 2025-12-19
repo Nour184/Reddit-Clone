@@ -7,12 +7,13 @@ import { Settings, Share2, Plus, MoreHorizontal, Cake, MessageSquare, Award, Fla
 import { Button } from "components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "components/ui/avatar";
-import { getSession } from "lib/session";
+import { getSession, removeSession } from "lib/session";
 import FeedCard from "components/shared/FeedCard/index";
 
 export default function UserProfilePage() {
     const params = useParams();
-    const routerUsername = params.username;
+    // Decode URI component because params.username might be "Ramy%40gmail.com" while session is "Ramy@gmail.com"
+    const routerUsername = decodeURIComponent(params.username);
     const session = getSession();
 
     // In a real app, fetch user data by username. Here we mock or use session if matches.
@@ -32,6 +33,29 @@ export default function UserProfilePage() {
         // We still check localStorage for old posts if any, but FeedCard handles the live ones
         setUserPosts([]);
     }, [routerUsername]);
+
+    const handleDeleteAccount = async () => {
+        if (!window.confirm("Are you sure you want to delete your account? This cannot be undone.")) {
+            return;
+        }
+
+        try {
+            const res = await fetch("/api/profile", {
+                method: "DELETE",
+            });
+
+            if (res.ok) {
+                // Clear session and redirect hard to home
+                removeSession(); // Ensure session is gone
+                window.location.href = "/";
+            } else {
+                alert("Failed to delete account. Please try again.");
+            }
+        } catch (error) {
+            console.error("Delete error:", error);
+            alert("An error occurred. Please try again.");
+        }
+    };
 
     return (
         <div className="container max-w-[1200px] mx-auto py-4">
@@ -84,7 +108,7 @@ export default function UserProfilePage() {
                         {/* Content */}
                         <div className="px-3 pb-4 relative">
                             {/* Avatar */}
-                            <div className="absolute -top-14 left-4">
+                            <div className="absolute -top-24 left-4">
                                 <div className="p-1.5 bg-card rounded-md inline-block">
                                     <Avatar className="w-20 h-20 rounded-md border border-border">
                                         <AvatarImage src={user.avatar} className="object-cover" />
@@ -112,13 +136,13 @@ export default function UserProfilePage() {
                             </div>
 
                             {/* Action Button */}
-                            <Button className="w-full rounded-full font-bold bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white mb-6" asChild>
-                                {isOwnProfile ? (
-                                    <Link href="/avatar">Create Avatar</Link>
-                                ) : (
-                                    <span>Follow</span>
+                            <div className="mb-6">
+                                {!isOwnProfile && (
+                                    <Button className="w-full rounded-full font-bold bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white" asChild>
+                                        <span>Follow</span>
+                                    </Button>
                                 )}
-                            </Button>
+                            </div>
 
                             {/* Stats Grid */}
                             <div className="grid grid-cols-2 gap-y-4 mb-6">
@@ -167,9 +191,18 @@ export default function UserProfilePage() {
                             )}
 
                             {/* More Options */}
-                            <div className="flex justify-end mt-4">
-                                <Button variant="ghost" size="sm" className="text-xs text-muted-foreground">More Options</Button>
-                            </div>
+                            {isOwnProfile && (
+                                <div className="flex justify-end mt-4">
+                                    <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        className="text-xs"
+                                        onClick={handleDeleteAccount}
+                                    >
+                                        Delete
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
