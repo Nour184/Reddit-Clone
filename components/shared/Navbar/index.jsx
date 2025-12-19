@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
+import { useSession, signOut } from "next-auth/react";
 import SearchBar from "components/search/SearchBar";
-import { getSession, removeSession } from "lib/session";
 import { Button } from "components/ui/button";
 import { Input } from "components/ui/input";
 import {
@@ -20,9 +20,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "components/ui/avatar";
 import { Search, Home, MessageSquare, Bell, Plus, ChevronDown, LogIn, User, FileText, Settings, LogOut, Moon, Sun, Image as ImageIcon } from "lucide-react";
 import { cn } from "lib/utils";
-
-// Mock user (replace with real auth later)
-
 
 /**
  * UserMenu Component
@@ -39,10 +36,8 @@ function UserMenu({ user }) {
     setMounted(true);
   }, []);
 
-  const handleLogout = () => {
-    removeSession();
-    router.push("/");
-    router.refresh();
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: "/" });
   };
 
   const toggleTheme = (e) => {
@@ -65,7 +60,7 @@ function UserMenu({ user }) {
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
               <p className="text-sm font-medium leading-none">{user.username}</p>
-              <p className="text-xs leading-none text-muted-foreground">{user.karma} karma</p>
+              <p className="text-xs leading-none text-muted-foreground">{user.karma || 0} karma</p>
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
@@ -149,7 +144,7 @@ function UserMenu({ user }) {
  * - Search bar
  * - Action buttons (messages, notifications, create post)
  * - User menu or login button
- * 
+ * - 
  * Sticky header that stays at top on scroll.
  */
 
@@ -176,31 +171,16 @@ const lightModeVariables = {
 };
 
 export default function Navbar({ user }) {
-  const [currentUser, setCurrentUser] = useState(user);
+  const { data: session } = useSession();
   const pathname = usePathname();
   const isAuthPage = pathname?.startsWith("/auth");
 
-  useEffect(() => {
-    // Check for active session on mount
-    const sessionUser = getSession();
-    if (sessionUser) {
-      setCurrentUser(sessionUser);
-    }
-
-    // Listen for session updates (login/logout)
-    const handleSessionUpdate = () => {
-      const updatedSession = getSession();
-      setCurrentUser(updatedSession);
-    };
-
-    window.addEventListener("session-updated", handleSessionUpdate);
-    return () => window.removeEventListener("session-updated", handleSessionUpdate);
-  }, []);
-
-  // Sync with prop if provided (server-side auth in future)
-  useEffect(() => {
-    if (user) setCurrentUser(user);
-  }, [user]);
+  // Use session user if available, otherwise fallback to prop (if any)
+  const displayUser = session?.user ? {
+    username: session.user.name,
+    avatar: session.user.image,
+    karma: 0 // Default karma as it's not in standard session yet
+  } : user;
 
   return (
     <header
@@ -273,8 +253,8 @@ export default function Navbar({ user }) {
           </Button>
 
           {/* User Menu or Log In */}
-          {currentUser ? (
-            <UserMenu user={currentUser} />
+          {displayUser ? (
+            <UserMenu user={displayUser} />
           ) : (
             <Button variant="outline" className="flex items-center gap-2" asChild>
               <Link href="/auth/login">

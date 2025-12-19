@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
+import { Button } from "../ui/button";
+import { Textarea } from "../ui/textarea";
+import { cn } from "../../lib/utils";
 
 export default function CommentForm({
     onSubmit,

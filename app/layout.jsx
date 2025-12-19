@@ -5,6 +5,8 @@ import Navbar from "../components/shared/Navbar/index";
 import ClientLayout from "../components/shared/ClientLayout";
 import { ThemeProvider } from "../components/theme-provider";
 
+import { SessionProvider } from "next-auth/react";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -23,29 +25,22 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
 
-  //SIGNED OUT USER
-  const mockUser = null;
-
-  //SIGNED In USER
-  //const mockUser = {
-  //username: "samy",
-  //avatar: "https://i.pravatar.cc/150?u=1",
-  //}
-
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem={false}
-          disableTransitionOnChange
-        >
-          <Navbar user={mockUser} />
-          <ClientLayout>
-            {children}
-          </ClientLayout>
-        </ThemeProvider>
+        <SessionProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="light"
+            enableSystem={false}
+            disableTransitionOnChange
+          >
+            <Navbar />
+            <ClientLayout>
+              {children}
+            </ClientLayout>
+          </ThemeProvider>
+        </SessionProvider>
       </body>
     </html>
   );
