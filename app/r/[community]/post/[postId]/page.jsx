@@ -20,8 +20,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "lib/utils";
-import CollapsibleThread from "components/comments/CollapsibleThread";
-import { getComments, addComment } from "lib/comment-store";
+import CommentForm from "components/comments/CommentForm";
+import CommentCard from "components/comments/CommentCard";
 
 export default function PostDetailPage() {
     const params = useParams();
@@ -31,6 +31,7 @@ export default function PostDetailPage() {
     const [post, setPost] = useState(null);
     const [loading, setLoading] = useState(true);
     const [notFound, setNotFound] = useState(false);
+    const [comments, setComments] = useState([]);
 
     useEffect(() => {
         // Fetch post from database API
@@ -77,8 +78,56 @@ export default function PostDetailPage() {
             }
         };
 
-        loadPost();
-    }, [postId, community]);
+        if (postId) {
+            loadPost();
+        }
+    }, [postId]);
+
+    useEffect(() => {
+        const fetchComments = async () => {
+            try {
+                const res = await fetch(`/api/posts/${postId}/comments`);
+
+                // 1. Handle "No Comments" (404) or other errors gracefully
+                if (!res.ok) {
+                    if (res.status === 404) {
+                        setComments([]); // Zero comments is a valid state, not an error
+                    } else {
+                        console.error('Failed to fetch comments');
+                    }
+                    return; // Stop execution here so we don't call res.json() again
+                }
+
+                // 2. Only read the stream ONCE
+                const data = await res.json();
+
+                const commentsWithVotes = await Promise.all(
+                    data.map(async (comment) => {
+                        try {
+                            const voteRes = await fetch(`/api/posts/${postId}/comments/${comment.comment_id}/votes`);
+                            if (voteRes.ok) {
+                                const voteData = await voteRes.json();
+
+                                // FIX: Ensure this is a NUMBER. 
+                                // Accessing 'VoteCount' directly as it is now returned from your SQL BIGINT sum
+                                const count = Number(voteData.VoteCount) || 0;
+                                return { ...comment, votes: count };
+                            }
+                        } catch (error) {
+                            console.error(`Error fetching votes for comment ${comment.comment_id}:`, error);
+                        }
+                        return { ...comment, votes: 0 };
+                    })
+                );
+
+                setComments(commentsWithVotes);
+            } catch (error) {
+                console.error('Error fetching comments:', error);
+            }
+        };
+
+        if (postId) fetchComments();
+    }, [postId]);
 
     const [communityData, setCommunityData] = useState(null);
 
@@ -133,6 +182,82 @@ export default function PostDetailPage() {
         return count;
     };
 
+    const handleAddComment = async (text) => {
+        try {
+            const res = await fetch(`/api/posts/${postId}/comments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ body: text }),
+            });
+
+            if (res.ok) {
+                const fetchRes = await fetch(`/api/posts/${postId}/comments`);
+                if (fetchRes.ok) {
+                    const data = await fetchRes.json();
+                    setComments(data);
+
+                    // Notify the rest of the app that this post was updated
+                    window.dispatchEvent(new CustomEvent('post-updated', { detail: postId }));
+                }
+            }
+        } catch (error) {
+            console.error('Error adding comment:', error);
+        }
+    };
+
+    const handleCommentDeleted = (deletedCommentId) => {
+        setComments(prev => prev.filter(c => c.comment_id !== deletedCommentId));
+
+        // Notify the rest of the app that a comment was removed
+        window.dispatchEvent(new CustomEvent('post-updated', { detail: postId }));
+    };
+
+    // Function to update comment text in state
+    const handleCommentEdited = (commentId, newText) => {
+        setComments(prev => prev.map(c =>
+            c.comment_id === commentId ? { ...c, body: newText } : c
+        ));
+    };
+
+    const handleCommentVote = async (commentId, newVoteState) => {
+        try {
+            const url = `/api/posts/${postId}/comments/${commentId}/votes`;
+
+            // 1. Send the correct request based on the state from VoteButtons
+            if (newVoteState === 'up') {
+                await fetch(url, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ flag: 1 })
+                });
+            } else if (newVoteState === 'down') {
+                await fetch(url, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ flag: -1 })
+                });
+            } else {
+                // This handles the 'null' state when a user un-clicks a button
+                await fetch(url, { method: 'DELETE' });
+            }
+
+            // 2. Refresh only this comment's vote count from the server
+            const voteRes = await fetch(url);
+            if (voteRes.ok) {
+                const voteData = await voteRes.json();
+
+                // Use Number() to ensure we don't pass an object to React
+                const updatedCount = Number(voteData.VoteCount) || 0;
+
+                setComments(prev => prev.map(c =>
+                    c.comment_id === commentId ? { ...c, votes: updatedCount } : c
+                ));
+            }
+        } catch (err) {
+            console.error("Failed to vote on comment:", err);
+        }
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-background flex items-center justify-center">
@@ -169,9 +294,9 @@ export default function PostDetailPage() {
         );
     }
 
-    const communityName = typeof post.community === 'string'
-        ? post.community
-        : post.community?.name || community;
+    const communityName = typeof post.community_name === 'string'
+        ? post.community_name
+        : post.community_name?.name || community;
 
     return (
         <div className="min-h-screen bg-background">
@@ -203,9 +328,9 @@ export default function PostDetailPage() {
                                         r/{communityName}
                                     </Link>
                                     <span>•</span>
-                                    <span>Posted by u/{post.author || 'CurrentUser'}</span>
+                                    <span>Posted by u/{post.user_email || 'CurrentUser'}</span>
                                     <span>•</span>
-                                    <span>{formatTimeAgo(post.createdAt)}</span>
+                                    <span>{formatTimeAgo(post.created_on)}</span>
                                 </div>
 
                                 <h1 className="text-2xl font-bold mb-3">{post.title}</h1>
@@ -237,23 +362,23 @@ export default function PostDetailPage() {
                                 {/* Content Area */}
                                 <div className="flex-1 min-w-0">
                                     {/* Text Content */}
-                                    {post.type === 'post' && post.content && (
+                                    {post.type === 'post' && post.body && (
                                         <div className="prose dark:prose-invert max-w-none mb-4">
-                                            <p className="whitespace-pre-wrap">{post.content}</p>
+                                            <p className="whitespace-pre-wrap">{post.body}</p>
                                         </div>
                                     )}
 
                                     {/* Link Content */}
-                                    {post.type === 'link' && post.content && (
+                                    {post.type === 'link' && post.body && (
                                         <a
-                                            href={post.content}
+                                            href={post.body}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="flex items-center gap-2 p-3 rounded-lg border hover:bg-accent transition-colors mb-4"
                                         >
                                             <ExternalLink className="w-5 h-5 text-blue-500" />
                                             <span className="text-blue-500 hover:underline truncate">
-                                                {post.content}
+                                                {post.body}
                                             </span>
                                         </a>
                                     )}
@@ -285,7 +410,7 @@ export default function PostDetailPage() {
                                     <AISummarizeButton
                                         postId={post.id}
                                         title={post.title}
-                                        content={post.content || post.title}
+                                        content={post.body || post.title}
                                         className="mb-4"
                                     />
 
@@ -295,7 +420,7 @@ export default function PostDetailPage() {
                                     <div className="flex items-center gap-2">
                                         <Button variant="ghost" size="sm" className="gap-2">
                                             <MessageSquare className="w-4 h-4" />
-                                            {post.comments || 0} Comments
+                                            {comments.length} Comments
                                         </Button>
                                         <Button variant="ghost" size="sm" className="gap-2">
                                             <Share className="w-4 h-4" />
@@ -312,7 +437,26 @@ export default function PostDetailPage() {
 
                             {/* Comments Section */}
                             <div className="border-t p-4">
-                                <CollapsibleThread postId={post.id} />
+                                <div className="space-y-4">
+                                    <CommentForm onSubmit={handleAddComment} submitLabel="Comment" />
+                                    {comments.length === 0 ? (
+                                        <p className="text-muted-foreground">No comments yet.</p>
+                                    ) : (
+                                        comments.map((comment) => (
+                                            <CommentCard
+                                                key={comment.comment_id}
+                                                id={comment.comment_id}
+                                                author={{ username: comment.user_email }} // Assuming email as username for now
+                                                content={comment.body}
+                                                createdAt={comment.created_on}
+                                                votes={Number(comment.votes) || 0}
+                                                onVote={(type) => handleCommentVote(comment.comment_id, type)}
+                                                onDelete={handleCommentDeleted}
+                                                onEdit={handleCommentEdited}
+                                            />
+                                        ))
+                                    )}
+                                </div>
                             </div>
                         </Card>
                     </div>

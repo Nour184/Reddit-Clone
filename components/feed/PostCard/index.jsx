@@ -79,6 +79,7 @@ export default function PostCard({
     }
   };
 
+
   return (
     <Card className={cn(
       "overflow-hidden border-border bg-card hover:bg-accent/5 transition-colors cursor-pointer",

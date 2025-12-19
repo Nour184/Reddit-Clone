@@ -3,7 +3,7 @@
 // components/comments/CommentCard.jsx
 import { useState } from "react";
 import Link from "next/link";
-import { MessageSquare, Share2, MoreHorizontal, Reply } from "lucide-react";
+import { MessageSquare, Share2, MoreHorizontal, Reply, Pencil, Trash2 } from "lucide-react";
 import VoteButtons from "components/post/VoteButtons/index.jsx";
 import UserAvatar from "components/user/UserAvatar/index.jsx";
 import TimeAgo from "components/shared/TimeAgo/index.jsx";
@@ -11,6 +11,9 @@ import ShareDropdown from "components/post/ShareDropdown/index.jsx";
 import { Button } from "components/ui/button";
 import { cn } from "../../lib/utils";
 import CommentForm from "./CommentForm";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "components/ui/dropdown-menu";
+import { useSession } from "next-auth/react"; 
+
 
 /**
  * CommentCard Component
@@ -36,6 +39,8 @@ import CommentForm from "./CommentForm";
  * - onReply: function - Reply handler (Optional now, as card handles submission)
  * - className: string - Additional CSS classes
  */
+
+
 export default function CommentCard({
     id,
     author,
@@ -46,12 +51,21 @@ export default function CommentCard({
     replies = [],
     depth = 0,
     onVote,
-    onReply, // Legacy support if needed
+    onReply,
+    onDelete,
+    onEdit, // Legacy support if needed
     className,
 }) {
     const [isExpanded, setIsExpanded] = useState(true);
     const [showReplies, setShowReplies] = useState(true);
     const [isReplying, setIsReplying] = useState(false);
+    const [isEditing, setIsEditing] = useState(false); //comment is being edited
+    const [isDeleting, setIsDeleting] = useState(false); //comment is being deleted
+    const { data: session } = useSession(); 
+
+    const currentUserEmail = session?.user?.email; //get the real current user email
+
+    const isOwner = author?.username === currentUserEmail;
 
     const handleReplyClick = () => {
         setIsReplying(!isReplying);
@@ -65,10 +79,59 @@ export default function CommentCard({
         }
     };
 
+    const handleEditSubmit = async (newText) => {
+        try {
+            const res = await fetch(`/api/posts/5/comments/${id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ body: newText }),
+            });
+
+            if (res.ok) {
+                const updatedComment = await res.json();
+                setIsEditing(false);
+                // Update the UI via parent function
+                if (onEdit) onEdit(id, newText); 
+            } else {
+                console.error("Failed to edit comment");
+            }
+        } catch (error) {
+            console.error("Error editing comment:", error);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!confirm("Are you sure you want to delete this comment?")) return;
+        
+        try {
+            setIsDeleting(true);
+            const res = await fetch(`/api/posts/59/comments/${id}`, {
+                method: "DELETE",
+            });
+
+            if (res.ok) {
+                // Remove from UI via parent function
+                if (onDelete) onDelete(id);
+            } else {
+                console.error("Failed to delete comment");
+                setIsDeleting(false);
+            }
+        } catch (error) {
+            console.error("Error deleting comment:", error);
+            setIsDeleting(false);
+        }
+    };
+
     // Indentation based on depth
     const indentClass = depth > 0 ? `ml-${Math.min(depth * 4, 20)}` : "";
 
-    return (
+    if (isDeleting) return null; //hide comment when deletedd immediatly
+    console.log("Debug Owner Check:", {
+    commentAuthor: author?.username,
+    myEmail: currentUserEmail,
+    isOwner: isOwner
+});
+  return (
         <div className={cn("group", className)}>
             <div className={cn("flex gap-3 py-2", indentClass)}>
                 {/* Vote Buttons */}
@@ -90,7 +153,8 @@ export default function CommentCard({
                             href={`/u/${author?.username || ""}`}
                             className="text-xs font-medium hover:underline"
                         >
-                            u/{author?.username || "unknown"}
+                            {/* Hide the domain for cleaner UI if it's an email */}
+                            u/{author?.username?.split('@')[0] || "unknown"}
                         </Link>
                         {createdAt && (
                             <>
@@ -98,31 +162,35 @@ export default function CommentCard({
                                 <TimeAgo timestamp={createdAt} />
                             </>
                         )}
-                        {votes !== 0 && (
-                            <>
-                                <span className="text-xs text-muted-foreground">·</span>
-                                <span className="text-xs text-muted-foreground">
-                                    {votes > 0 ? "+" : ""}{votes} {votes === 1 ? "point" : "points"}
-                                </span>
-                            </>
-                        )}
                     </div>
 
-                    {/* Comment Text */}
-                    {isExpanded && (
-                        <div className="text-sm text-foreground whitespace-pre-wrap break-words">
-                            {content}
+                    {/* --- CONTENT AREA (Edit Mode vs View Mode) --- */}
+                    {isEditing ? (
+                        <div className="mt-2">
+                            <CommentForm
+                                initialValue={content}
+                                onSubmit={handleEditSubmit}
+                                onCancel={() => setIsEditing(false)}
+                                submitLabel="Save"
+                                autoFocus
+                            />
                         </div>
+                    ) : (
+                        isExpanded && (
+                            <div className="text-sm text-foreground whitespace-pre-wrap break-words">
+                                {content}
+                            </div>
+                        )
                     )}
 
                     {/* Action Buttons */}
-                    {isExpanded && (
+                    {!isEditing && isExpanded && (
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button
                                 variant="ghost"
                                 size="sm"
                                 className="h-7 text-xs text-muted-foreground hover:text-foreground"
-                                onClick={handleReplyClick}
+                                onClick={() => setIsReplying(!isReplying)}
                             >
                                 <Reply className="w-3.5 h-3.5 mr-1" />
                                 Reply
@@ -135,64 +203,50 @@ export default function CommentCard({
                                 variant="ghost"
                             />
 
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                                aria-label="More options"
-                            >
-                                <MoreHorizontal className="w-4 h-4" />
-                            </Button>
+                            {/* --- MORE MENU (Edit/Delete) --- */}
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                    >
+                                        <MoreHorizontal className="w-4 h-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start">
+                                    {isOwner && (
+                                        <>
+                                            <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                                                <Pencil className="w-4 h-4 mr-2" />
+                                                Edit
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={handleDelete} className="text-red-600 focus:text-red-600">
+                                                <Trash2 className="w-4 h-4 mr-2" />
+                                                Delete
+                                            </DropdownMenuItem>
+                                        </>
+                                    )}
+                                    <DropdownMenuItem>Report</DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
                     )}
 
-                    {/* Reply Form */}
+                    {/* Reply Form (Keep existing logic) */}
                     {isReplying && isExpanded && (
-                        <div className="mt-2">
+                         <div className="mt-2">
                             <CommentForm
-                                onSubmit={handleReplySubmit}
+                                onSubmit={(text) => {
+                                    if(onReply) {
+                                        onReply(id, text);
+                                        setIsReplying(false);
+                                    }
+                                }}
                                 onCancel={() => setIsReplying(false)}
                                 submitLabel="Reply"
                                 autoFocus
                             />
-                        </div>
-                    )}
-
-                    {/* Nested Replies */}
-                    {replies && replies.length > 0 && isExpanded && (
-                        <div className="space-y-1 pt-2">
-                            {showReplies ? (
-                                <>
-                                    {replies.map((reply) => (
-                                        <CommentCard
-                                            key={reply.id}
-                                            {...reply}
-                                            depth={depth + 1}
-                                            onVote={onVote}
-                                            onReply={onReply}
-                                        />
-                                    ))}
-                                    {replies.length > 0 && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-7 text-xs text-muted-foreground hover:text-foreground mt-1"
-                                            onClick={() => setShowReplies(false)}
-                                        >
-                                            Hide {replies.length} {replies.length === 1 ? "reply" : "replies"}
-                                        </Button>
-                                    )}
-                                </>
-                            ) : (
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 text-xs text-muted-foreground hover:text-foreground"
-                                    onClick={() => setShowReplies(true)}
-                                >
-                                    Show {replies.length} {replies.length === 1 ? "reply" : "replies"}
-                                </Button>
-                            )}
                         </div>
                     )}
                 </div>

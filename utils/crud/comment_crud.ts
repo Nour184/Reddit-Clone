@@ -133,10 +133,12 @@ export async function VoteComment(
 export async function GetCommentVotes(commentId: number) {
     try {
         const result = await pool.query(
-            "SELECT * FROM get_comment_votes($1)", 
+            "SELECT get_comment_votes($1) AS count", 
             [commentId]
         );
-        return result.rows;
+        const totalVotes = Number(result.rows[0].count);
+        console.log(`Debug: Comment ${commentId} has ${totalVotes} votes`);
+        return totalVotes;
     } catch (err) {
         console.error("Error getting comment votes:", err);
         throw err;
