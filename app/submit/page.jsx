@@ -123,9 +123,9 @@ export default function CreatePostPage() {
         }
     }, [status, router]);
 
-    /* ---------- Communities ---------- */
+    /* ---------- Communities (all communities from database) ---------- */
     useEffect(() => {
-        const fetchComms = async () => {
+        const fetchCommunities = async () => {
             try {
                 const res = await fetch("/api/subreddits");
                 if (res.ok) {
@@ -146,9 +146,10 @@ export default function CreatePostPage() {
                 }
             } catch (err) {
                 console.error("Failed to fetch communities:", err);
+                setCommunities([]);
             }
         };
-        fetchComms();
+        fetchCommunities();
     }, [searchParams]);
 
     /* ---------- Validation ---------- */
@@ -230,18 +231,24 @@ export default function CreatePostPage() {
 
                 {dropdownOpen && (
                     <div className="absolute bg-white border w-full z-10">
-                        {communities.map(c => (
-                            <div
-                                key={c.slug}
-                                onClick={() => {
-                                    setSelectedCommunity(c);
-                                    setDropdownOpen(false);
-                                }}
-                                className="p-2 hover:bg-gray-100 cursor-pointer"
-                            >
-                                r/{c.name}
+                        {communities.length === 0 ? (
+                            <div className="p-2 text-sm text-muted-foreground">
+                                No communities available. Create one first!
                             </div>
-                        ))}
+                        ) : (
+                            communities.map(c => (
+                                <div
+                                    key={c.slug}
+                                    onClick={() => {
+                                        setSelectedCommunity(c);
+                                        setDropdownOpen(false);
+                                    }}
+                                    className="p-2 hover:bg-gray-100 cursor-pointer"
+                                >
+                                    r/{c.name}
+                                </div>
+                            ))
+                        )}
                     </div>
                 )}
             </div>

@@ -1,4 +1,3 @@
-import { dummyPosts, dummyCommunities, dummyProfiles } from "./dummyPosts";
 
 // ==========================================
 // SEARCH API UTILITIES
@@ -24,6 +23,7 @@ export async function fetchSearchResults(query: string) {
 
 /**
  * Search Communities
+ * Endpoint: GET /api/subreddits?q={query}
  * Endpoint: GET /api/subreddits?q={query}
  */
 export async function fetchCommunities(query: string) {

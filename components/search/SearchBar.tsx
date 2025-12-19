@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { Search, X, Clock } from "lucide-react";
 import { Input } from "components/ui/input";
 import { fetchSearchResults, fetchCommunities, fetchProfiles } from "lib/search";
-import { dummyRecentSearches } from "lib/dummyPosts";
+// import { dummyRecentSearches } from "lib/dummyPosts";
+const dummyRecentSearches: string[] = [];
 import { cn } from "lib/utils";
 import { Avatar, AvatarFallback } from "components/ui/avatar";
 
@@ -203,7 +204,7 @@ export default function SearchBar() {
                                         <div className="flex items-center gap-2">
                                             <Avatar className="w-8 h-8">
                                                 <AvatarFallback className="bg-orange-500 text-white font-bold">
-                                                    {profile.username[2].toUpperCase()}
+                                                    {profile.username.replace('u/', '').charAt(0).toUpperCase()}
                                                 </AvatarFallback>
                                             </Avatar>
                                             <div className="flex flex-col">

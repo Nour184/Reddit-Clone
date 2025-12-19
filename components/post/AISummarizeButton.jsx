@@ -6,7 +6,7 @@ import { Card } from "components/ui/card";
 import { Sparkles, Loader2, X } from "lucide-react";
 import { cn } from "lib/utils";
 
-export default function AISummarizeButton({ title, content, className }) {
+export default function AISummarizeButton({ postId, title, content, className }) {
     const [summary, setSummary] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -29,15 +29,9 @@ export default function AISummarizeButton({ title, content, className }) {
         setError(null);
 
         try {
-            console.log('Calling AI summarization API with:', { title, content });
+            console.log('Calling AI summarization API for post:', postId);
 
-            const response = await fetch('/api/summarize', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ title, content }),
-            });
+            const response = await fetch(`/api/ai?postID=${postId}`);
 
             console.log('API Response status:', response.status);
 

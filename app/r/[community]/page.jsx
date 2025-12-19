@@ -180,7 +180,6 @@ export default function CommunityPage() {
         if (communityName) {
             fetchPosts();
         }
-
     }, [communityName]);
 
     const sortOptions = [

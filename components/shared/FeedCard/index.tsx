@@ -153,6 +153,7 @@ export default function FeedCard({ postList, communityName, myPosts }: FeedCardP
                     key={p.id}
                     {...p as any}
                     onVote={(newVote: "up" | "down" | null) => handlePostVote(p.id, newVote)}
+                    onDelete={() => setPosts(prev => prev.filter(item => item.id !== p.id))}
                 />
             ))}
 

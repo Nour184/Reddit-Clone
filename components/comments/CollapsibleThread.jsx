@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getComments, addComment } from "../../lib/comment-store";
+import { getComments, addComment } from "../../lib/comment-store";
 import CommentSort from "./CommentSort";
 import CommentForm from "./CommentForm";
 import CommentCard from "./CommentCard";
