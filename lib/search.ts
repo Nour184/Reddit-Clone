@@ -13,17 +13,11 @@ export async function fetchSearchResults(query: string) {
     if (!query) return [];
 
     const lowerQuery = query.toLowerCase();
-    return dummyPosts.filter(
-        (post) =>
-            post.title.toLowerCase().includes(lowerQuery) ||
-            post.content.toLowerCase().includes(lowerQuery) ||
-            post.subreddit.toLowerCase().includes(lowerQuery)
-    );
+    return [] // TODO: needs API integration with posts yet!
 }
 
 /**
  * Search Communities
- * Endpoint: GET /api/subreddits?q={query}
  * Endpoint: GET /api/subreddits?q={query}
  */
 export async function fetchCommunities(query: string) {
@@ -54,9 +48,7 @@ export async function fetchCommunities(query: string) {
 export async function fetchProfiles(query: string) {
     // MOCK IMPLEMENTATION - Backend support for user search pending
     await new Promise((resolve) => setTimeout(resolve, 200));
-    if (!query) return dummyProfiles;
+    if (!query) return [];
 
-    return dummyProfiles.filter(p =>
-        p.username.toLowerCase().includes(query.toLowerCase())
-    );
+    return [] // TODO: needs API integration with profiles yet!
 }
