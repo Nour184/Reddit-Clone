@@ -111,6 +111,7 @@ export default function CreatePostPage() {
     const [communities, setCommunities] = useState([]);
     const [selectedCommunity, setSelectedCommunity] = useState(null);
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errors, setErrors] = useState({});
 
@@ -124,32 +125,53 @@ export default function CreatePostPage() {
     }, [status, router]);
 
     /* ---------- Communities (all communities from database) ---------- */
+    /* ---------- Communities Search & Url Param ---------- */
+    // Debounced search for communities
     useEffect(() => {
-        const fetchCommunities = async () => {
+        const timer = setTimeout(async () => {
             try {
-                const res = await fetch("/api/subreddits");
+                // If query is empty, it returns default (top/all) depending on API, which is what we want for initial state
+                const res = await fetch(`/api/subreddits?q=${encodeURIComponent(searchQuery)}`);
                 if (res.ok) {
                     const data = await res.json();
-                    // API returns array of community objects
-                    const all = data.map(c => ({
+                    const mapped = data.map(c => ({
                         name: c.name,
                         slug: c.name.toLowerCase(),
-                        icon: c.community_photo_link // Store icon for potential UI use
+                        icon: c.community_photo_link
                     }));
-                    setCommunities(all);
-
-                    const param = searchParams.get("community");
-                    if (param) {
-                        const found = all.find(c => c.slug === param.toLowerCase());
-                        if (found) setSelectedCommunity(found);
-                    }
+                    setCommunities(mapped);
                 }
             } catch (err) {
                 console.error("Failed to fetch communities:", err);
-                setCommunities([]);
             }
-        };
-        fetchCommunities();
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    // Handle URL param "community" to set initial selection
+    useEffect(() => {
+        const param = searchParams.get("community");
+        if (param) {
+            // We need to fetch this specific community's details to set it as selected
+            // even if it's not in the initial "top" list.
+            const fetchSelected = async () => {
+                try {
+                    const res = await fetch(`/api/subreddits/${encodeURIComponent(param)}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        setSelectedCommunity({
+                            name: data.name,
+                            slug: data.name.toLowerCase(),
+                            icon: data.community_photo_link
+                        });
+                    }
+                } catch (e) {
+                    console.error("Failed to load selected community param", e);
+                }
+            };
+            fetchSelected();
+        }
     }, [searchParams]);
 
     /* ---------- Validation ---------- */
@@ -222,33 +244,62 @@ export default function CreatePostPage() {
             {/* Community */}
             <div className="relative mb-4">
                 <div
-                    onClick={() => setDropdownOpen(!dropdownOpen)}
-                    className="border p-2 flex justify-between cursor-pointer"
+                    onClick={() => {
+                        setDropdownOpen(!dropdownOpen);
+                        if (!dropdownOpen) {
+                            setTimeout(() => document.getElementById("community-search-input")?.focus(), 0);
+                        }
+                    }}
+                    className="border p-2 flex justify-between cursor-pointer rounded-md bg-background hover:bg-accent/50 transition-colors items-center"
                 >
-                    {selectedCommunity ? selectedCommunity.name : "Select community"}
-                    <ChevronDown />
+                    {selectedCommunity ? (
+                        <span className="font-medium">r/{selectedCommunity.name}</span>
+                    ) : (
+                        <span className="text-muted-foreground">Select community</span>
+                    )}
+                    <ChevronDown className="h-4 w-4 opacity-50" />
                 </div>
 
                 {dropdownOpen && (
-                    <div className="absolute bg-white border w-full z-10">
-                        {communities.length === 0 ? (
-                            <div className="p-2 text-sm text-muted-foreground">
-                                No communities available. Create one first!
-                            </div>
-                        ) : (
-                            communities.map(c => (
-                                <div
-                                    key={c.slug}
-                                    onClick={() => {
-                                        setSelectedCommunity(c);
-                                        setDropdownOpen(false);
-                                    }}
-                                    className="p-2 hover:bg-gray-100 cursor-pointer"
-                                >
-                                    r/{c.name}
+                    <div className="absolute top-full mt-1 bg-popover border text-popover-foreground w-full z-50 rounded-md shadow-md max-h-[300px] overflow-hidden flex flex-col">
+                        <div className="p-2 border-b sticky top-0 bg-popover z-10">
+                            <input
+                                id="community-search-input"
+                                className="w-full bg-secondary/50 border-none rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-ring text-foreground placeholder:text-muted-foreground"
+                                placeholder="Search communities..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                            />
+                        </div>
+                        <div className="overflow-y-auto max-h-[250px]">
+                            {communities.length === 0 ? (
+                                <div className="p-3 text-sm text-muted-foreground text-center">
+                                    {searchQuery ? "No communities found." : "No communities available."}
                                 </div>
-                            ))
-                        )}
+                            ) : (
+                                communities.map(c => (
+                                    <div
+                                        key={c.slug}
+                                        onClick={() => {
+                                            setSelectedCommunity(c);
+                                            setDropdownOpen(false);
+                                            setSearchQuery("");
+                                        }}
+                                        className="p-2 hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors px-3 py-2 text-sm flex items-center gap-2"
+                                    >
+                                        {c.icon ? (
+                                            <img src={c.icon} className="w-5 h-5 rounded-full object-cover bg-muted" />
+                                        ) : (
+                                            <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">
+                                                {c.name[0].toUpperCase()}
+                                            </div>
+                                        )}
+                                        <span>r/{c.name}</span>
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     </div>
                 )}
             </div>

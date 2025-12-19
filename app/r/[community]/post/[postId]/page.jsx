@@ -80,6 +80,39 @@ export default function PostDetailPage() {
         loadPost();
     }, [postId, community]);
 
+    const [communityData, setCommunityData] = useState(null);
+
+    // Fetch Community Data for sidebar
+    useEffect(() => {
+        const loadCommunityData = async () => {
+            const name = post?.community?.name || community;
+            if (!name) return;
+
+            try {
+                const [commRes, membersRes] = await Promise.all([
+                    fetch(`/api/subreddits/${name}`),
+                    fetch(`/api/subreddits/${name}/members`)
+                ]);
+
+                if (commRes.ok) {
+                    const data = await commRes.json();
+                    const membersCount = membersRes.ok ? await membersRes.json() : 0;
+                    setCommunityData({
+                        ...data,
+                        members: membersCount,
+                        createdAt: data.created_on
+                    });
+                }
+            } catch (error) {
+                console.error("Error loading community data:", error);
+            }
+        };
+
+        if (post || community) {
+            loadCommunityData();
+        }
+    }, [post, community]);
+
     const formatTimeAgo = (dateString) => {
         const date = new Date(dateString);
         const now = new Date();
@@ -89,6 +122,15 @@ export default function PostDetailPage() {
         if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
         if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
         return `${Math.floor(seconds / 86400)}d ago`;
+    };
+
+    const formatMembers = (count) => {
+        if (typeof count === 'number') {
+            if (count >= 1000000) return (count / 1000000).toFixed(1) + 'm';
+            if (count >= 1000) return (count / 1000).toFixed(1) + 'k';
+            return count.toString();
+        }
+        return count;
     };
 
     if (loading) {
@@ -133,20 +175,23 @@ export default function PostDetailPage() {
 
     return (
         <div className="min-h-screen bg-background">
-            <div className="max-w-5xl mx-auto px-4 py-6">
-                {/* Back Button */}
-                <Button
-                    variant="ghost"
-                    onClick={() => router.back()}
-                    className="mb-4 gap-2"
-                >
-                    <ArrowLeft className="w-4 h-4" />
-                    Back
-                </Button>
+            {/* Main Centered Container */}
+            <div className="max-w-[1100px] mx-auto px-4 py-6 relative">
+                {/* Back Button - Constrained to 740px alignment */}
+                <div className="max-w-[740px] mx-auto mb-4">
+                    <Button
+                        variant="ghost"
+                        onClick={() => router.back()}
+                        className="gap-2 px-0 hover:bg-transparent"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        Back
+                    </Button>
+                </div>
 
-                <div className="flex gap-6">
-                    {/* Main Content */}
-                    <div className="flex-1 min-w-0">
+                <div className="relative">
+                    {/* Main Content - Centered 740px */}
+                    <div className="max-w-[740px] mx-auto">
                         <Card className="overflow-hidden">
                             {/* Post Header */}
                             <div className="p-4 border-b">
@@ -179,7 +224,7 @@ export default function PostDetailPage() {
                                 )}
                             </div>
 
-                            {/* Post Content */}
+                            {/* Post Content Cluster */}
                             <div className="flex gap-4 p-4">
                                 {/* Vote Buttons */}
                                 <div className="flex-shrink-0">
@@ -267,22 +312,47 @@ export default function PostDetailPage() {
 
                             {/* Comments Section */}
                             <div className="border-t p-4">
-                                {/* Use new CollapsibleThread component */}
                                 <CollapsibleThread postId={post.id} />
                             </div>
                         </Card>
                     </div>
 
-                    {/* Right Sidebar */}
-                    <aside className="hidden lg:block w-80 flex-shrink-0">
-                        <Card className="p-4 sticky top-4">
-                            <h3 className="font-semibold mb-3">About Community</h3>
-                            <Link href={`/r/${communityName}`}>
-                                <Button className="w-full" variant="outline">
-                                    View r/{communityName}
-                                </Button>
-                            </Link>
-                        </Card>
+                    {/* Right Sidebar - Positioned relative to the 1100px container */}
+                    <aside className="hidden xl:block absolute top-0 left-[calc(50%+390px)] w-80">
+                        {communityData && (
+                            <Card className="p-4 sticky top-4">
+                                <div className="flex justify-between items-center mb-3">
+                                    <h2 className="font-bold text-sm text-muted-foreground uppercase tracking-wider">About Community</h2>
+                                </div>
+
+                                <p className="text-sm mb-4 leading-relaxed">
+                                    {communityData.description}
+                                </p>
+
+                                <div className="h-px bg-border my-4" />
+
+                                <div className="flex justify-between mb-2">
+                                    <div className="flex flex-col">
+                                        <span className="font-bold text-lg">{formatMembers(communityData.members)}</span>
+                                        <span className="text-xs text-muted-foreground">Members</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="font-bold text-sm">
+                                            Online
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">Guess how many</span>
+                                    </div>
+                                </div>
+
+                                <div className="h-px bg-border my-4" />
+
+                                <Link href={`/r/${communityName}`} className="w-full block">
+                                    <Button className="w-full rounded-full font-bold">
+                                        View Community
+                                    </Button>
+                                </Link>
+                            </Card>
+                        )}
                     </aside>
                 </div>
             </div>
