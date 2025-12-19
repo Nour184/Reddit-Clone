@@ -9,13 +9,8 @@ import { dummyPosts, dummyCommunities, dummyProfiles } from "./dummyPosts";
  * Endpoint: GET /api/search/posts?q={query}
  */
 export async function fetchSearchResults(query: string) {
-    // TODO: Replace with real API call
-    // const res = await fetch(`/api/search/posts?q=${encodeURIComponent(query)}`);
-    // if (!res.ok) throw new Error('Failed to fetch posts');
-    // return res.json();
-
-    // MOCK IMPLEMENTATION
-    await new Promise((resolve) => setTimeout(resolve, 300)); // Simulate latency
+    // MOCK IMPLEMENTATION - Backend support for post search pending
+    await new Promise((resolve) => setTimeout(resolve, 300));
     if (!query) return [];
 
     const lowerQuery = query.toLowerCase();
@@ -29,20 +24,27 @@ export async function fetchSearchResults(query: string) {
 
 /**
  * Search Communities
- * Endpoint: GET /api/search/communities?q={query}
+ * Endpoint: GET /api/subreddits?q={query}
  */
 export async function fetchCommunities(query: string) {
-    // TODO: Replace with real API call
-    // const res = await fetch(`/api/search/communities?q=${encodeURIComponent(query)}`);
-    // return res.json();
+    if (!query) return [];
 
-    // MOCK IMPLEMENTATION
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    if (!query) return dummyCommunities;
+    try {
+        const res = await fetch(`/api/subreddits?q=${encodeURIComponent(query)}&limit=5`);
+        if (!res.ok) throw new Error('Failed to fetch communities');
 
-    return dummyCommunities.filter(c =>
-        c.name.toLowerCase().includes(query.toLowerCase())
-    );
+        const data = await res.json();
+        // Map API response to SearchBar expected format
+        return data.map((c: any) => ({
+            name: c.name,
+            members: c.members_count || 0, // Fallback if API doesn't return count
+            icon: c.community_photo_link,
+            color: c.theme_color
+        }));
+    } catch (error) {
+        console.error("Search communities error:", error);
+        return [];
+    }
 }
 
 /**
@@ -50,11 +52,7 @@ export async function fetchCommunities(query: string) {
  * Endpoint: GET /api/search/users?q={query}
  */
 export async function fetchProfiles(query: string) {
-    // TODO: Replace with real API call
-    // const res = await fetch(`/api/search/users?q=${encodeURIComponent(query)}`);
-    // return res.json();
-
-    // MOCK IMPLEMENTATION
+    // MOCK IMPLEMENTATION - Backend support for user search pending
     await new Promise((resolve) => setTimeout(resolve, 200));
     if (!query) return dummyProfiles;
 

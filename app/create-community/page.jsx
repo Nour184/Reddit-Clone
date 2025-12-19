@@ -5,8 +5,21 @@ import { useRouter } from "next/navigation";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Textarea } from "../../components/ui/textarea";
-import { createCommunity } from "../../lib/community-store";
 import { X } from "lucide-react";
+import Toast from "../../components/shared/Toast";
+
+
+async function createCommunity({ name, description }) {
+  const response = await fetch("/api/subreddits", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ name, description }),
+  });
+  const data = await response.json();
+  return data;
+}
 
 export default function CreateCommunityPage() {
   const router = useRouter();
@@ -15,6 +28,8 @@ export default function CreateCommunityPage() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [toast, setToast] = useState(null);
+
   useEffect(() => {
     // trap Escape to close modal
     const onKey = (e) => { if (e.key === 'Escape') router.back(); };
@@ -22,7 +37,7 @@ export default function CreateCommunityPage() {
     return () => window.removeEventListener('keydown', onKey);
   }, [router]);
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e && e.preventDefault();
     setError("");
     const trimmed = name.trim().replace(/^r\//i, "");
@@ -33,9 +48,13 @@ export default function CreateCommunityPage() {
 
     try {
       setIsSubmitting(true);
-      const newCommunity = createCommunity({ name: trimmed, description });
-      router.push(`/r/${encodeURIComponent(newCommunity.name)}`);
+      const data = await createCommunity({ name: trimmed, description });
+      setToast({ message: "Community created successfully", variant: "success" });
+      setTimeout(() => {
+        router.push(`/r/${encodeURIComponent(name)}`);
+      }, 1000);
     } catch (err) {
+      setToast({ message: "Failed to create community", variant: "error" });
       setError(err.message || "Failed to create community");
       setIsSubmitting(false);
     }
@@ -46,6 +65,18 @@ export default function CreateCommunityPage() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
       <div className="absolute inset-0 bg-black/40" onClick={() => router.back()} />
+
+      {/* Toast Container */}
+      {toast && (
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[60]">
+          <Toast
+            message={toast.message}
+            variant={toast.variant}
+            duration={3000}
+            onClose={() => setToast(null)}
+          />
+        </div>
+      )}
 
       <div className="relative max-w-4xl w-full bg-white dark:bg-[#0b0b0c] rounded-2xl shadow-2xl overflow-hidden">
         <div className="flex items-start justify-between p-6 border-b">

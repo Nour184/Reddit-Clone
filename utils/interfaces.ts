@@ -31,6 +31,8 @@ export interface Post {
     body?: string | null;
     picture_link?: string | null;
     created_on: Date;
+    username?: string;
+    profile_picture_link?: string;
 }
 
 // Comment data

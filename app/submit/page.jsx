@@ -18,7 +18,7 @@ import {
     Plus
 } from "lucide-react";
 import Link from "next/link";
-import { getSession } from "lib/session";
+import { useSession } from "next-auth/react";
 
 /* ===========================
    Media Upload Component
@@ -114,28 +114,35 @@ export default function CreatePostPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errors, setErrors] = useState({});
 
+    const { data: session, status } = useSession();
+
     /* ---------- Auth Guard ---------- */
     useEffect(() => {
-        const session = getSession();
-        if (!session?.loggedIn) router.push("/auth/login");
-    }, []);
+        if (status === "unauthenticated") {
+            router.push("/auth/login");
+        }
+    }, [status, router]);
 
     /* ---------- Communities ---------- */
     useEffect(() => {
         const fetchComms = async () => {
             try {
                 const res = await fetch("/api/subreddits");
-                const data = await res.json();
-                const all = data.map(c => ({
-                    name: c.name,
-                    slug: c.name.toLowerCase()
-                }));
-                setCommunities(all);
+                if (res.ok) {
+                    const data = await res.json();
+                    // API returns array of community objects
+                    const all = data.map(c => ({
+                        name: c.name,
+                        slug: c.name.toLowerCase(),
+                        icon: c.community_photo_link // Store icon for potential UI use
+                    }));
+                    setCommunities(all);
 
-                const param = searchParams.get("community");
-                if (param) {
-                    const found = all.find(c => c.slug === param.toLowerCase());
-                    if (found) setSelectedCommunity(found);
+                    const param = searchParams.get("community");
+                    if (param) {
+                        const found = all.find(c => c.slug === param.toLowerCase());
+                        if (found) setSelectedCommunity(found);
+                    }
                 }
             } catch (err) {
                 console.error("Failed to fetch communities:", err);
