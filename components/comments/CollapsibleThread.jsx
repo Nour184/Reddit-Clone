@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getComments, addComment } from "@/lib/comment-store";
+import { getComments, addComment } from "../../lib/comment-store";
 import CommentSort from "./CommentSort";
 import CommentForm from "./CommentForm";
 import CommentCard from "./CommentCard";
-import LoadingSpinner from "@/components/shared/LoadingSpinner/index.jsx";
+import LoadingSpinner from "../shared/LoadingSpinner/index.jsx";
 
 export default function CollapsibleThread({ postId }) {
     const [comments, setComments] = useState([]);
