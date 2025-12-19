@@ -120,28 +120,35 @@ export default function CreatePostPage() {
         if (!session?.loggedIn) router.push("/auth/login");
     }, []);
 
-    /* ---------- Communities ---------- */
+    /* ---------- Communities (joined only) ---------- */
     useEffect(() => {
-        const fetchComms = async () => {
+        const fetchJoined = async () => {
             try {
-                const res = await fetch("/api/subreddits");
+                const res = await fetch("/api/me/memberships");
+                if (!res.ok) {
+                    // If unauthorized or error, leave communities empty
+                    setCommunities([]);
+                    return;
+                }
                 const data = await res.json();
-                const all = data.map(c => ({
-                    name: c.name,
-                    slug: c.name.toLowerCase()
+                // API returns rows from joined_communities with `community_name`
+                const joined = data.map((r) => ({
+                    name: r.community_name,
+                    slug: r.community_name.toLowerCase(),
                 }));
-                setCommunities(all);
+                setCommunities(joined);
 
                 const param = searchParams.get("community");
                 if (param) {
-                    const found = all.find(c => c.slug === param.toLowerCase());
+                    const found = joined.find(c => c.slug === param.toLowerCase());
                     if (found) setSelectedCommunity(found);
                 }
             } catch (err) {
-                console.error("Failed to fetch communities:", err);
+                console.error("Failed to fetch joined communities:", err);
+                setCommunities([]);
             }
         };
-        fetchComms();
+        fetchJoined();
     }, [searchParams]);
 
     /* ---------- Validation ---------- */
@@ -223,18 +230,24 @@ export default function CreatePostPage() {
 
                 {dropdownOpen && (
                     <div className="absolute bg-white border w-full z-10">
-                        {communities.map(c => (
-                            <div
-                                key={c.slug}
-                                onClick={() => {
-                                    setSelectedCommunity(c);
-                                    setDropdownOpen(false);
-                                }}
-                                className="p-2 hover:bg-gray-100 cursor-pointer"
-                            >
-                                r/{c.name}
-                            </div>
-                        ))}
+                            {communities.length === 0 ? (
+                                <div className="p-2 text-sm text-muted-foreground">
+                                    You haven't joined any communities. Join one to post.
+                                </div>
+                            ) : (
+                                communities.map(c => (
+                                    <div
+                                        key={c.slug}
+                                        onClick={() => {
+                                            setSelectedCommunity(c);
+                                            setDropdownOpen(false);
+                                        }}
+                                        className="p-2 hover:bg-gray-100 cursor-pointer"
+                                    >
+                                        r/{c.name}
+                                    </div>
+                                ))
+                            )}
                     </div>
                 )}
             </div>

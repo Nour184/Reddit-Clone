@@ -7,6 +7,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import SearchBar from "components/search/SearchBar";
 import { getSession, removeSession } from "lib/session";
+import { signOut } from "next-auth/react";
 import { Button } from "components/ui/button";
 import { Input } from "components/ui/input";
 import {
@@ -39,10 +40,8 @@ function UserMenu({ user }) {
     setMounted(true);
   }, []);
 
-  const handleLogout = () => {
-    removeSession();
-    router.push("/");
-    router.refresh();
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: "/" });
   };
 
   const toggleTheme = (e) => {

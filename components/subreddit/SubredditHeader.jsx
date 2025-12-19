@@ -1,9 +1,10 @@
 // SubredditHeader.jsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Button from "../shared/Button";
+import { isJoined, joinCommunity, leaveCommunity } from "lib/community-store";
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -12,12 +13,22 @@ import {
 } from "components/ui/dropdown-menu";
 
 export default function SubredditHeader({ communityId }) {
-    const [isJoined, setIsJoined] = useState(false);
+    const [isJoinedState, setIsJoinedState] = useState(false);
     const [NotificationON, setIsNotificationON] = useState(false);
     const [isFavorite, setIsFavorite] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
 
     const router = useRouter();
+
+    useEffect(() => {
+        // initialize join state from persisted store
+        try {
+            const joined = isJoined(communityId);
+            setIsJoinedState(joined);
+        } catch (e) {
+            // ignore on server or errors
+        }
+    }, [communityId]);
 
     const handleClick = () => {
         console.log("create post clicked");
@@ -26,10 +37,18 @@ export default function SubredditHeader({ communityId }) {
 
     return (
         <div className="flex gap-2">
-            {isJoined ? (
-                <Button onClick={() => setIsJoined(false)}>Joined</Button>
+            {isJoinedState ? (
+                <Button onClick={() => {
+                    // leave and persist
+                    leaveCommunity(communityId);
+                    setIsJoinedState(false);
+                }}>Joined</Button>
             ) : (
-                <Button onClick={() => setIsJoined(true)}>Join</Button>
+                <Button onClick={() => {
+                    // join and persist
+                    joinCommunity(communityId);
+                    setIsJoinedState(true);
+                }}>Join</Button>
             )}
 
             {isJoined && (
