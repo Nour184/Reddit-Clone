@@ -58,10 +58,10 @@ export default function AISummarizeButton({ postId, title, content, className })
             <Button
                 onClick={handleSummarize}
                 disabled={loading}
-                variant={isExpanded ? "secondary" : "outline"}
+                variant={isExpanded ? "secondary" : "secondary"}
                 className={cn(
-                    "gap-2 transition-all",
-                    isExpanded && "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800"
+                    "rounded-full h-9 bg-secondary/50 hover:bg-secondary/80 gap-2 border-none transition-all",
+                    isExpanded && "bg-purple-50 dark:bg-purple-900/20"
                 )}
             >
                 {loading ? (

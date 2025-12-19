@@ -12,8 +12,8 @@ import {
   Trash2,
 } from "lucide-react";
 
+import AISummarizeButton from "../../post/AISummarizeButton";
 import VoteButtons from "../../post/VoteButtons";
-import UserAvatar from "../../user/UserAvatar";
 import TimeAgo from "../../shared/TimeAgo";
 import CommunityInfo from "../../subreddit/Sidebar/CommunityInfo";
 import { Button } from "../../ui/button";
@@ -48,7 +48,7 @@ export default function PostCard({
         if (!res.ok) return;
         const data = await res.json();
         if (mounted && data?.username) setCurrentUser(data.username);
-      } catch {}
+      } catch { }
     })();
     return () => {
       mounted = false;
@@ -59,6 +59,11 @@ export default function PostCard({
     currentUser &&
     author?.username &&
     currentUser === author.username;
+
+  const formatCount = (count) => {
+    if (count >= 1000) return `${(count / 1000).toFixed(1)}k`;
+    return count;
+  };
 
   const handleDelete = async () => {
     if (!confirm("Delete this post?")) return;
@@ -75,28 +80,22 @@ export default function PostCard({
   };
 
   return (
-    <Card className={cn("overflow-hidden", className)}>
-      <div className="flex gap-3 p-4">
-        <VoteButtons
-          initialVotes={votes}
-          initialVoteState={voteState}
-          onVote={onVote}
-        />
-
-        <div className="flex-1 space-y-3">
-          <div className="flex items-center gap-2 flex-wrap text-xs">
+    <Card className={cn(
+      "overflow-hidden border-border bg-card hover:bg-accent/5 transition-colors cursor-pointer",
+      className
+    )}>
+      <div className="p-3 flex flex-col gap-2">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
             {community && (
               <CommunityInfo
                 name={community.name}
                 members={community.members}
                 href={community.href}
+                className="text-foreground font-semibold hover:underline"
               />
             )}
-            <span>·</span>
-            <UserAvatar username={author?.username} size="sm" />
-            <Link href={`/u/${author?.username || ""}`}>
-              u/{author?.username || "unknown"}
-            </Link>
             {createdAt && (
               <>
                 <span>·</span>
@@ -105,59 +104,82 @@ export default function PostCard({
             )}
           </div>
 
-          <Link href={href}>
-            <h3 className="text-lg font-semibold">{title}</h3>
-          </Link>
-
-          {content && <p className="text-sm">{content}</p>}
-
-          {imageUrl && (
-            <Image
-              src={imageUrl}
-              alt={title}
-              width={800}
-              height={600}
-              className="rounded-lg"
-              unoptimized
-            />
-          )}
-
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href={`${href}#comments`}>
-                <MessageSquare className="w-4 h-4 mr-1" />
-                {comments} comments
-              </Link>
+            <Button size="sm" className="rounded-full h-8 px-4 font-bold bg-blue-600 hover:bg-blue-700 text-white">
+              Join
             </Button>
-
-            <Button variant="ghost" size="sm">
-              <Share2 className="w-4 h-4 mr-1" />
-              Share
-            </Button>
-
-            <Button variant="ghost" size="sm">
-              <Bookmark className="w-4 h-4 mr-1" />
-              Save
-            </Button>
-
-            {isOwner && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-red-500"
-                onClick={handleDelete}
-              >
-                <Trash2 className="w-4 h-4 mr-1" />
-                Delete
-              </Button>
-            )}
-
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 hover:bg-secondary">
               <MoreHorizontal className="w-4 h-4" />
             </Button>
           </div>
+        </div>
+
+        {/* Title */}
+        <Link href={href}>
+          <h3 className="text-[20px] font-bold leading-7 mb-1">{title}</h3>
+        </Link>
+
+        {/* Content / Image */}
+        <div className="space-y-3">
+          {content && <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">{content}</p>}
+
+          {imageUrl && (
+            <div className="relative w-full rounded-xl overflow-hidden bg-muted/20 border border-border">
+              <Image
+                src={imageUrl}
+                alt={title}
+                width={800}
+                height={600}
+                className="w-full object-contain max-h-[512px]"
+                unoptimized
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center gap-2 pt-1 flex-wrap">
+          {/* Votes */}
+          <VoteButtons
+            initialVotes={votes}
+            initialVoteState={voteState}
+            onVote={onVote}
+            horizontal={true}
+          />
+
+          {/* Comments Pill */}
+          <Button variant="secondary" size="sm" className="rounded-full h-9 bg-secondary/50 hover:bg-secondary/80 gap-2 border-none" asChild>
+            <Link href={`${href}#comments`}>
+              <MessageSquare className="w-5 h-5" />
+              <span className="font-bold text-xs">{formatCount(comments)}</span>
+            </Link>
+          </Button>
+
+          {/* AI Summarize Pill */}
+          <AISummarizeButton
+            postId={id}
+            title={title}
+            content={content}
+            className="m-0"
+          />
+
+          {isOwner && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="rounded-full h-9 hover:bg-red-50 dark:hover:bg-red-900/10 text-red-500 gap-2"
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+            >
+              <Trash2 className="w-4 h-4" />
+              <span className="text-xs font-bold">Delete</span>
+            </Button>
+          )}
         </div>
       </div>
     </Card>
   );
 }
+

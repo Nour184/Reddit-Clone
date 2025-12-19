@@ -2,7 +2,7 @@
 
 // components/shared/VoteButtons/index.jsx
 import { useState } from "react";
-import { ChevronUp, ChevronDown } from "lucide-react";
+import { ArrowBigUp, ArrowBigDown } from "lucide-react";
 import { cn } from "../../../lib/utils";
 
 /**
@@ -24,6 +24,7 @@ export default function VoteButtons({
   onVote,
   disabled = false,
   compact = false,
+  horizontal = false,
 }) {
   const [votes, setVotes] = useState(initialVotes);
   const [voteState, setVoteState] = useState(initialVoteState);
@@ -39,39 +40,45 @@ export default function VoteButtons({
     let voteChange = 0;
 
     if (voteState === newVote) {
-      // Toggle off: remove vote
       newVoteState = null;
       voteChange = newVote === "up" ? -1 : 1;
     } else if (voteState === null) {
-      // New vote
       newVoteState = newVote;
       voteChange = newVote === "up" ? 1 : -1;
     } else {
-      // Switch vote direction
       voteChange = newVote === "up" ? 2 : -2;
       newVoteState = newVote;
     }
 
     setVoteState(newVoteState);
     setVotes((prev) => prev + voteChange);
-    
+
     if (onVote) {
       onVote(newVoteState);
     }
   };
 
-  const iconSize = compact ? 18 : 20;
-  const buttonSize = compact ? "h-6 w-6" : "h-8 w-8";
+  const iconSize = compact ? 16 : 20;
+  const buttonSize = compact ? "h-7 w-7" : "h-8 w-8";
+
+  const formatVotes = (count) => {
+    if (count >= 1000) return `${(count / 1000).toFixed(1)}k`;
+    return count;
+  };
 
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className={cn(
+      "flex items-center bg-secondary/50 rounded-full",
+      horizontal ? "flex-row px-1 h-9" : "flex-col py-1 gap-1"
+    )}>
       {/* Upvote Button */}
       <button
+        type="button"
         onClick={() => handleVote("up")}
         disabled={disabled}
         className={cn(
           buttonSize,
-          "flex items-center justify-center rounded transition-all duration-200",
+          "flex items-center justify-center rounded-full transition-all duration-200",
           "hover:bg-orange-100 dark:hover:bg-orange-900/20",
           "active:scale-90",
           voteState === "up"
@@ -83,28 +90,29 @@ export default function VoteButtons({
         aria-label="Upvote"
         aria-pressed={voteState === "up"}
       >
-        <ChevronUp className={cn("transition-transform", isAnimating && "scale-125")} size={iconSize} strokeWidth={2.5} />
+        <ArrowBigUp className={cn("transition-transform", isAnimating && "scale-125")} size={iconSize} strokeWidth={2.5} />
       </button>
 
       {/* Vote Count */}
       <span
         className={cn(
-          "font-bold text-sm select-none transition-colors",
+          "font-bold text-xs select-none transition-colors px-1 min-w-[3ch] text-center",
           voteState === "up" && "text-orange-500",
           voteState === "down" && "text-blue-500",
           !voteState && "text-foreground"
         )}
       >
-        {votes}
+        {formatVotes(votes)}
       </span>
 
       {/* Downvote Button */}
       <button
+        type="button"
         onClick={() => handleVote("down")}
         disabled={disabled}
         className={cn(
           buttonSize,
-          "flex items-center justify-center rounded transition-all duration-200",
+          "flex items-center justify-center rounded-full transition-all duration-200",
           "hover:bg-blue-100 dark:hover:bg-blue-900/20",
           "active:scale-90",
           voteState === "down"
@@ -116,7 +124,7 @@ export default function VoteButtons({
         aria-label="Downvote"
         aria-pressed={voteState === "down"}
       >
-        <ChevronDown className={cn("transition-transform", isAnimating && "scale-125")} size={iconSize} strokeWidth={2.5} />
+        <ArrowBigDown className={cn("transition-transform", isAnimating && "scale-125")} size={iconSize} strokeWidth={2.5} />
       </button>
     </div>
   );

@@ -1,15 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { Search, X, Clock } from "lucide-react";
-import { Input } from "components/ui/input";
+import { useRouter, useParams } from "next/navigation";
+import { X, Clock } from "lucide-react";
 import { fetchSearchResults, fetchCommunities, fetchProfiles } from "lib/search";
-// import { dummyRecentSearches } from "lib/dummyPosts";
-const dummyRecentSearches: string[] = [];
 import { cn } from "lib/utils";
 import { Avatar, AvatarFallback } from "components/ui/avatar";
 
+// Types
 interface SearchResult {
     id: string;
     title: string;
@@ -29,8 +27,12 @@ interface ProfileResult {
     avatar: string | null;
 }
 
+const dummyRecentSearches: string[] = [];
+
 export default function SearchBar() {
     const [query, setQuery] = useState("");
+    const params = useParams();
+    const currentCommunity = typeof params?.community === 'string' ? decodeURIComponent(params.community) : null;
 
     // Data States
     const [results, setResults] = useState<SearchResult[]>([]);
@@ -42,33 +44,28 @@ export default function SearchBar() {
     const dropdownRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
 
-    // Handle outside click to close dropdown
+    // Handle outside click
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
                 setIsOpen(false);
             }
         };
-
         document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
+        return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Debounced search effect
+    // Debounced search
     useEffect(() => {
         const timer = setTimeout(async () => {
             if (query.trim()) {
                 setIsLoading(true);
                 try {
-                    // TODO: Parallel data fetching (replace with real API calls eventually)
                     const [postsData, communitiesData, profilesData] = await Promise.all([
                         fetchSearchResults(query),
                         fetchCommunities(query),
                         fetchProfiles(query)
                     ]);
-
                     setResults(postsData);
                     setCommunities(communitiesData);
                     setProfiles(profilesData);
@@ -83,7 +80,6 @@ export default function SearchBar() {
                 setProfiles([]);
             }
         }, 300);
-
         return () => clearTimeout(timer);
     }, [query]);
 
@@ -98,35 +94,90 @@ export default function SearchBar() {
         setResults([]);
         setCommunities([]);
         setProfiles([]);
-        if (document.activeElement === dropdownRef.current?.querySelector("input")) {
-            setIsOpen(true);
-        }
+        // Re-focus logic if needed
+    };
+
+    const handleClearCommunity = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        router.push('/');
     };
 
     return (
-        <div className="relative w-full max-w-[600px]" ref={dropdownRef}>
-            <div className="relative flex items-center">
-                <Search className="absolute left-3 w-5 h-5 text-muted-foreground pointer-events-none" />
-                <Input
+        <div className={cn("relative w-full max-w-[600px]", isOpen && "z-50")} ref={dropdownRef}>
+
+            {/* CSS for the Glow Animation */}
+            <style jsx global>{`
+                @keyframes reddit-glow {
+                    0% {
+                        box-shadow: 0 0 0px rgba(255, 69, 0, 0);
+                    }
+                    50% {
+                        box-shadow: 0 0 15px rgba(255, 69, 0, 0.4);
+                        border-color: #FF4500;
+                    }
+                    100% {
+                        box-shadow: 0 0 0px rgba(255, 69, 0, 0);
+                    }
+                }
+                .animate-glow {
+                    animation: reddit-glow 3s ease-in-out infinite;
+                }
+                /* Hide scrollbar for dropdown */
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 8px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: var(--muted);
+                    border-radius: 4px;
+                }
+            `}</style>
+
+            <div className={cn(
+                "relative flex items-center w-full h-11 transition-all duration-300 z-20",
+                // When open, the dropdown below handles the border and background
+                !isOpen ? "bg-muted rounded-full border border-border" : "bg-transparent border-transparent"
+            )}>
+
+                {/* Search Icon / Logo */}
+                <div className="pl-3.5 pr-1 flex items-center justify-center pointer-events-none">
+                    <img src="/favicon.ico" alt="Reddit" className="w-6 h-6 object-contain" />
+                </div>
+
+                {/* Community Pill (if active) */}
+                {currentCommunity && !isOpen && (
+                    <div className="flex items-center bg-popover text-foreground rounded-full px-2 py-0.5 text-sm mr-2 animate-in fade-in zoom-in duration-200">
+                        <span className="truncate max-w-[100px] font-medium">r/{currentCommunity}</span>
+                        <button
+                            type="button"
+                            className="ml-1 hover:text-primary rounded-full p-0.5"
+                            onClick={handleClearCommunity}
+                        >
+                            <X className="w-3 h-3" />
+                        </button>
+                    </div>
+                )}
+
+                {/* Input Field */}
+                <input
                     type="text"
-                    placeholder="Search Reddit"
+                    placeholder={currentCommunity && !isOpen ? "" : "Find anything"}
+                    className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground text-sm h-full w-full py-2 pr-10 text-center"
                     value={query}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    onChange={(e) => {
                         setQuery(e.target.value);
                         setIsOpen(true);
                     }}
                     onFocus={() => setIsOpen(true)}
-                    className={cn(
-                        "pl-10 pr-10 py-2 h-10 rounded-full bg-muted/30 border-transparent transition-all duration-200",
-                        "hover:bg-background hover:border-gray-300 hover:ring-0",
-                        "focus:bg-background focus:border-blue-500 focus:ring-1 focus:ring-blue-500",
-                        isOpen && "rounded-b-none rounded-t-[20px] bg-background border-b-0 border-gray-200"
-                    )}
                 />
+
+                {/* Clear Button */}
                 {query && (
                     <button
                         onClick={handleClear}
-                        className="absolute right-3 text-muted-foreground hover:text-foreground"
+                        className="absolute right-4 text-muted-foreground hover:text-foreground"
                         type="button"
                     >
                         <X className="w-4 h-4" />
@@ -134,9 +185,13 @@ export default function SearchBar() {
                 )}
             </div>
 
+            {/* Dropdown Results - Unifies the container and border when open */}
             {isOpen && (
-                <div className="absolute top-full left-0 right-0 bg-background border border-t-0 border-gray-200 rounded-b-[20px] shadow-lg overflow-hidden z-50">
-                    <div className="py-2 max-h-[500px] overflow-y-auto custom-scrollbar">
+                <div className={cn(
+                    "absolute top-0 left-0 right-0 bg-popover border border-border rounded-[20px] shadow-2xl z-10 pt-11 animate-in fade-in duration-200",
+                    "animate-glow border-[#FF4500]"
+                )}>
+                    <div className="py-2 max-h-[450px] overflow-y-auto custom-scrollbar text-foreground rounded-b-[20px]">
 
                         {/* A. Recent Searches */}
                         {!query && (
@@ -144,10 +199,8 @@ export default function SearchBar() {
                                 {dummyRecentSearches.map((term, i) => (
                                     <div
                                         key={i}
-                                        className="flex items-center gap-3 px-4 py-2 hover:bg-muted/50 cursor-pointer text-sm"
-                                        onClick={() => {
-                                            setQuery(term);
-                                        }}
+                                        className="flex items-center gap-3 px-4 py-2 hover:bg-muted cursor-pointer text-sm transition-colors"
+                                        onClick={() => setQuery(term)}
                                     >
                                         <Clock className="w-4 h-4 text-muted-foreground" />
                                         <span className="text-foreground">{term}</span>
@@ -159,24 +212,22 @@ export default function SearchBar() {
                         {/* B. Communities */}
                         {query && communities.length > 0 && (
                             <div className="pb-2">
-                                <div className="px-4 py-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                                <div className="px-4 py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                                     Communities
                                 </div>
                                 {communities.map((community) => (
                                     <div
                                         key={community.name}
-                                        className="flex items-center justify-between px-4 py-2 hover:bg-muted/50 cursor-pointer"
+                                        className="flex items-center justify-between px-4 py-2 hover:bg-muted cursor-pointer transition-colors"
                                         onClick={() => handleSelect(`/r/${community.name.replace('r/', '')}`)}
                                     >
                                         <div className="flex items-center gap-3">
-                                            <div
-                                                className={cn(
-                                                    "w-5 h-5 rounded-full flex-shrink-0 bg-gradient-to-br",
-                                                    community.color || "from-gray-400 to-gray-600"
-                                                )}
-                                            />
+                                            <div className={cn(
+                                                "w-6 h-6 rounded-full flex-shrink-0 bg-gradient-to-br",
+                                                community.color || "from-blue-500 to-purple-500"
+                                            )} />
                                             <div className="flex flex-col">
-                                                <span className="text-sm font-medium">{community.name}</span>
+                                                <span className="text-sm font-medium text-foreground">{community.name}</span>
                                                 <span className="text-xs text-muted-foreground">{community.members.toLocaleString()} members</span>
                                             </div>
                                         </div>
@@ -186,29 +237,29 @@ export default function SearchBar() {
                         )}
 
                         {query && communities.length > 0 && profiles.length > 0 && (
-                            <div className="h-px bg-muted mx-4 my-1" />
+                            <div className="h-px bg-border mx-4 my-1" />
                         )}
 
                         {/* C. Profiles */}
                         {query && profiles.length > 0 && (
                             <div className="pb-2">
-                                <div className="px-4 py-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                    Profiles
+                                <div className="px-4 py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                                    People
                                 </div>
                                 {profiles.map((profile) => (
                                     <div
                                         key={profile.username}
-                                        className="flex items-center justify-between px-4 py-2 hover:bg-muted/50 cursor-pointer"
+                                        className="flex items-center justify-between px-4 py-2 hover:bg-muted cursor-pointer transition-colors"
                                         onClick={() => handleSelect(`/u/${profile.username.replace('u/', '')}`)}
                                     >
-                                        <div className="flex items-center gap-2">
-                                            <Avatar className="w-8 h-8">
-                                                <AvatarFallback className="bg-orange-500 text-white font-bold">
+                                        <div className="flex items-center gap-3">
+                                            <Avatar className="w-6 h-6">
+                                                <AvatarFallback className="bg-[#FF4500] text-white text-xs font-bold">
                                                     {profile.username.replace('u/', '').charAt(0).toUpperCase()}
                                                 </AvatarFallback>
                                             </Avatar>
                                             <div className="flex flex-col">
-                                                <span className="text-sm font-medium">{profile.username}</span>
+                                                <span className="text-sm font-medium text-foreground">{profile.username}</span>
                                                 <span className="text-xs text-muted-foreground">{profile.karma.toLocaleString()} karma</span>
                                             </div>
                                         </div>
@@ -217,21 +268,21 @@ export default function SearchBar() {
                             </div>
                         )}
 
-                        {/* D. Posts (Search Results) */}
+                        {/* D. Posts */}
                         {query && results.length > 0 && (
                             <>
-                                {(communities.length > 0 || profiles.length > 0) && <div className="h-px bg-muted mx-4 my-1" />}
+                                {(communities.length > 0 || profiles.length > 0) && <div className="h-px bg-border mx-4 my-1" />}
                                 <div className="pb-2">
-                                    <div className="px-4 py-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                                    <div className="px-4 py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                                         Posts
                                     </div>
                                     {results.map((result) => (
                                         <div
                                             key={result.id}
                                             onClick={() => handleSelect(`/post/${result.id}`)}
-                                            className="px-4 py-2 hover:bg-muted/50 cursor-pointer transition-colors"
+                                            className="px-4 py-2 hover:bg-muted cursor-pointer transition-colors group"
                                         >
-                                            <div className="text-sm font-medium text-foreground truncate">
+                                            <div className="text-sm font-medium text-foreground truncate group-hover:text-primary">
                                                 {result.title}
                                             </div>
                                             <div className="text-xs text-muted-foreground">
@@ -243,15 +294,15 @@ export default function SearchBar() {
                             </>
                         )}
 
-                        {/* Loading / No Results fallback for actual search */}
+                        {/* Loading / Empty States */}
                         {query && isLoading && (
-                            <div className="px-4 py-3 text-center text-sm text-muted-foreground">
-                                Looking for &#34;{query}&#34;...
+                            <div className="px-4 py-4 text-center text-sm text-muted-foreground">
+                                Searching Reddit...
                             </div>
                         )}
                         {query && !isLoading && results.length === 0 && communities.length === 0 && profiles.length === 0 && (
-                            <div className="px-4 py-3 text-center text-sm text-muted-foreground">
-                                No results found
+                            <div className="px-4 py-4 text-center text-sm text-muted-foreground">
+                                No results found for "{query}"
                             </div>
                         )}
 
@@ -261,3 +312,4 @@ export default function SearchBar() {
         </div>
     );
 }
+

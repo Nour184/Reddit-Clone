@@ -225,7 +225,7 @@ export default function CommunityPage() {
             </div>
 
             {/* Community Header */}
-            <div className="max-w-5xl mx-auto px-4">
+            <div className="max-w-[1100px] mx-auto px-4">
                 <div className="relative -mt-12 md:-mt-16">
                     {/* Community Icon */}
                     <div className="flex items-end gap-4 mb-4">
@@ -255,7 +255,7 @@ export default function CommunityPage() {
             </div>
 
             {/* Main Content Area */}
-            <div className="max-w-5xl mx-auto px-4 mt-6">
+            <div className="max-w-[1100px] mx-auto px-4 mt-6">
                 <div className="flex gap-6">
                     {/* Posts Feed */}
                     <div className="flex-1 w-full min-w-0">
