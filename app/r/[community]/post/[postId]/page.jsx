@@ -19,8 +19,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "lib/utils";
-import CollapsibleThread from "components/comments/CollapsibleThread";
-import { getComments, addComment } from "lib/comment-store";
+import CommentForm from "components/comments/CommentForm";
+import CommentCard from "components/comments/CommentCard";
 
 export default function PostDetailPage() {
     const params = useParams();
@@ -30,51 +30,35 @@ export default function PostDetailPage() {
     const [post, setPost] = useState(null);
     const [loading, setLoading] = useState(true);
     const [notFound, setNotFound] = useState(false);
+    const [comments, setComments] = useState([]);
 
-    useEffect(() => {
-        // Load post from localStorage or use mock data
-        const loadPost = () => {
+useEffect(() => {
+        const fetchPost = async () => {
             try {
-                const posts = JSON.parse(localStorage.getItem('posts') || '[]');
-                let foundPost = posts.find(p => p.id == postId || p.id === parseInt(postId));
+                setLoading(true);
+                const res = await fetch(`/api/posts/${postId}`);
+                
+                if (res.ok) {
+                    const rawData = await res.json();
+                    
+                    // --- DATA TRANSFORMATION (The Fix) ---
+                    const formattedPost = {
+                        ...rawData, // Keep all original API fields (title, user_email, etc.)
+                        
+                        // 1. Calculate 'type' since API doesn't send it
+                        type: rawData.picture_link ? 'image' : 'post',
+                        
+                        // 2. Convert single picture string into the Array of Objects your JSX expects
+                        picture_link: rawData.picture_link 
+                            ? [{ type: 'image', preview: rawData.picture_link }] 
+                            : []
+                    };
+                    // -------------------------------------
 
-                // If no post found, use mock data for testing AI feature
-                if (!foundPost) {
-                    const mockPosts = [
-                        {
-                            id: 1,
-                            title: "Understanding React Hooks and Their Benefits",
-                            content: "React Hooks revolutionized how we write React components. They allow us to use state and other React features without writing a class. The useState hook lets us add state to functional components, making it easy to manage component state. The useEffect hook handles side effects like data fetching, subscriptions, and manual DOM manipulations. Hooks make code more reusable and easier to understand by allowing you to extract stateful logic from components. They also reduce the complexity of component hierarchies and make it easier to share logic between components without using higher-order components or render props.",
-                            author: "demo_user",
-                            community: { name: community },
-                            upvotes: 150,
-                            comments: 23,
-                            createdAt: new Date(Date.now() - 3600000).toISOString(),
-                            type: 'post',
-                            href: `/r/${community}/post/1`,
-                        },
-                        {
-                            id: 2,
-                            title: "Getting Started with Next.js 14 App Router",
-                            content: "Next.js 14 introduces powerful new features including Server Actions and improved performance. The App Router provides a new way to build applications with React Server Components. Server Actions allow you to run server-side code directly from your components without creating API routes. The new metadata API makes SEO optimization easier than ever before. Turbopack integration speeds up local development significantly, making the developer experience much better.",
-                            author: "nextjs_fan",
-                            community: { name: community },
-                            upvotes: 89,
-                            comments: 12,
-                            createdAt: new Date(Date.now() - 7200000).toISOString(),
-                            type: 'post',
-                            href: `/r/${community}/post/2`,
-                        }
-                    ];
-
-                    // Try matching by numeric id, string id, or legacy ids like 'post1'
-                    foundPost = mockPosts.find(p => p.id == postId || p.id === parseInt(postId) || p.id === Number(postId) || p.id === `post${postId}` || p.id === `post${String(postId)}`);
-                }
-
-                if (foundPost) {
-                    setPost(foundPost);
+                    setPost(formattedPost);
                     setNotFound(false);
                 } else {
+                    console.error('Failed to fetch post');
                     setNotFound(true);
                 }
             } catch (error) {
@@ -85,8 +69,30 @@ export default function PostDetailPage() {
             }
         };
 
-        loadPost();
-    }, [postId, community]);
+        if (postId) {
+            fetchPost();
+        }
+    }, [postId]);
+
+    useEffect(() => {
+        const fetchComments = async () => {
+            try {
+                const res = await fetch(`/api/posts/${postId}/comments`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setComments(data);
+                } else {
+                    console.error('Failed to fetch comments');
+                }
+            } catch (error) {
+                console.error('Error fetching comments:', error);
+            }
+        };
+
+        if (postId) {
+            fetchComments();
+        }
+    }, [postId]);
 
     const formatTimeAgo = (dateString) => {
         const date = new Date(dateString);
@@ -97,6 +103,46 @@ export default function PostDetailPage() {
         if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
         if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
         return `${Math.floor(seconds / 86400)}d ago`;
+    };
+
+    const handleAddComment = async (text) => {
+        try {
+            const res = await fetch(`/api/posts/${postId}/comments`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ body: text }),
+            });
+            if (res.ok) {
+                // Refetch comments
+                const fetchRes = await fetch(`/api/posts/${postId}/comments`);
+                if (fetchRes.ok) {
+                    const data = await fetchRes.json();
+                    setComments(data);
+                    localStorage.setItem(`count_for_post_${postId}`, data.length);//Save the new count to "Frontend Memory"
+                }
+            } else {
+                console.error('Failed to add comment');
+            }
+        } catch (error) {
+            console.error('Error adding comment:', error);
+        }
+    };
+
+    // 1. Function to remove a comment from state
+    const handleCommentDeleted = (deletedCommentId) => {
+    setComments(prev => prev.filter(c => c.comment_id !== deletedCommentId));
+    // Update local storage count
+    const newCount = comments.length - 1;
+    localStorage.setItem(`count_for_post_${postId}`, newCount);
+   };
+
+    // 2. Function to update comment text in state
+    const handleCommentEdited = (commentId, newText) => {
+    setComments(prev => prev.map(c => 
+        c.comment_id === commentId ? { ...c, body: newText } : c
+    ));
     };
 
     if (loading) {
@@ -135,9 +181,9 @@ export default function PostDetailPage() {
         );
     }
 
-    const communityName = typeof post.community === 'string'
-        ? post.community
-        : post.community?.name || community;
+    const communityName = typeof post.community_name === 'string'
+        ? post.community_name
+        : post.community_name?.name || community;
 
     return (
         <div className="min-h-screen bg-background">
@@ -166,14 +212,14 @@ export default function PostDetailPage() {
                                         r/{communityName}
                                     </Link>
                                     <span>•</span>
-                                    <span>Posted by u/{post.author || 'CurrentUser'}</span>
+                                    <span>Posted by u/{post.user_email || 'CurrentUser'}</span>
                                     <span>•</span>
-                                    <span>{formatTimeAgo(post.createdAt)}</span>
+                                    <span>{formatTimeAgo(post.created_on)}</span>
                                 </div>
 
                                 <h1 className="text-2xl font-bold mb-3">{post.title}</h1>
 
-                                {/* Post Type Badge */}
+                               {/* Post Type Badge */}
                                 {post.type && post.type !== 'post' && (
                                     <span className={cn(
                                         "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
@@ -200,31 +246,31 @@ export default function PostDetailPage() {
                                 {/* Content Area */}
                                 <div className="flex-1 min-w-0">
                                     {/* Text Content */}
-                                    {post.type === 'post' && post.content && (
+                                    {post.type === 'post' && post.body && (
                                         <div className="prose dark:prose-invert max-w-none mb-4">
-                                            <p className="whitespace-pre-wrap">{post.content}</p>
+                                            <p className="whitespace-pre-wrap">{post.body}</p>
                                         </div>
                                     )}
 
                                     {/* Link Content */}
-                                    {post.type === 'link' && post.content && (
+                                    {post.type === 'link' && post.body && (
                                         <a
-                                            href={post.content}
+                                            href={post.body}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="flex items-center gap-2 p-3 rounded-lg border hover:bg-accent transition-colors mb-4"
                                         >
                                             <ExternalLink className="w-5 h-5 text-blue-500" />
                                             <span className="text-blue-500 hover:underline truncate">
-                                                {post.content}
+                                                {post.body}
                                             </span>
                                         </a>
                                     )}
 
                                     {/* Media Content */}
-                                    {post.type === 'image' && post.media && post.media.length > 0 && (
+                                    {post.type === 'image' && post.picture_link && post.picture_link.length > 0 && (
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                            {post.media.map((media, idx) => (
+                                            {post.picture_link.map((media, idx) => (
                                                 <div key={idx} className="rounded-lg overflow-hidden border">
                                                     {media.type === 'video' ? (
                                                         <video
@@ -247,7 +293,7 @@ export default function PostDetailPage() {
                                     {/* AI Summarize Button - THE MAIN FEATURE */}
                                     <AISummarizeButton
                                         title={post.title}
-                                        content={post.content || post.title}
+                                        content={post.body || post.title}
                                         className="mb-4"
                                     />
 
@@ -257,7 +303,7 @@ export default function PostDetailPage() {
                                     <div className="flex items-center gap-2">
                                         <Button variant="ghost" size="sm" className="gap-2">
                                             <MessageSquare className="w-4 h-4" />
-                                            {post.comments || 0} Comments
+                                            {comments.length} Comments 
                                         </Button>
                                         <Button variant="ghost" size="sm" className="gap-2">
                                             <Share className="w-4 h-4" />
@@ -276,8 +322,25 @@ export default function PostDetailPage() {
 
                             {/* Comments Section */}
                             <div className="border-t p-4">
-                                {/* Use new CollapsibleThread component */}
-                                <CollapsibleThread postId={post.id} />
+                                <div className="space-y-4">
+                                    <CommentForm onSubmit={handleAddComment} submitLabel="Comment" />
+                                    {comments.length === 0 ? (
+                                        <p className="text-muted-foreground">No comments yet.</p>
+                                    ) : (
+                                        comments.map((comment) => (
+                                            <CommentCard
+                                                key={comment.comment_id}
+                                                id={comment.comment_id}
+                                                author={{ username: comment.user_email }} // Assuming email as username for now
+                                                content={comment.body}
+                                                createdAt={comment.created_on}
+                                                votes={0} // API doesn't return votes yet
+                                                onDelete={handleCommentDeleted}
+                                                onEdit={handleCommentEdited}
+                                            />
+                                        ))
+                                    )}
+                                </div>
                             </div>
                         </Card>
                     </div>

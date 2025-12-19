@@ -3,6 +3,7 @@
 // components/shared/PostCard/index.jsx
 import Link from "next/link";
 import Image from "next/image";
+import { useState, useEffect } from "react";
 import { MessageSquare, Share2, Bookmark, MoreHorizontal, ExternalLink } from "lucide-react";
 import VoteButtons from "components/post/VoteButtons/index.jsx";
 import UserAvatar from "components/user/UserAvatar/index.jsx";
@@ -32,6 +33,25 @@ export default function PostCard({
   const hasImage = !!imageUrl;
   const hasLink = !!linkUrl;
   const hasContent = !!content;
+
+  // --- THE FIX: State to hold the comment count ---
+  const [commentCount, setCommentCount] = useState(comments);
+
+  // Check for updated count in local memory 
+  useEffect(() => {
+    // 1. If the prop `comments` changes (e.g. API refresh), update state
+    setCommentCount(comments);
+
+    // 2. Check if we have a locally saved "newer" count
+    const savedCount = localStorage.getItem(`count_for_post_${id}`);
+    if (savedCount) {
+       // Only update if the saved count is different/newer
+       const parsed = parseInt(savedCount);
+       if (!isNaN(parsed) && parsed > comments) {
+           setCommentCount(parsed);
+       }
+    }
+  }, [id, comments]);
 
   return (
     <Card className={cn("overflow-hidden hover:border-primary/20 transition-colors", className)}>
@@ -157,7 +177,7 @@ export default function PostCard({
             >
               <Link href={`${href}#comments`}>
                 <MessageSquare className="w-4 h-4 mr-1.5" />
-                {comments} {comments === 1 ? "comment" : "comments"}
+                {commentCount} {commentCount === 1 ? "comment" : "comments"}
               </Link>
             </Button>
 
