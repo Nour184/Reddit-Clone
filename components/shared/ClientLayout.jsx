@@ -10,7 +10,7 @@ export default function ClientLayout({ children }) {
     return (
         <>
             {!isAuthPage && <Sidebar />}
-            <main className={`pt-16 ${!isAuthPage ? "lg:pl-80" : ""}`}>
+            <main className="pt-16">
                 {children}
             </main>
         </>

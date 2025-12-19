@@ -1,17 +1,24 @@
 "use client";
 
-// components/shared/PostCard/index.jsx
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect } from "react";
-import { MessageSquare, Share2, Bookmark, MoreHorizontal, ExternalLink } from "lucide-react";
-import VoteButtons from "components/post/VoteButtons/index.jsx";
-import UserAvatar from "components/user/UserAvatar/index.jsx";
-import TimeAgo from "components/shared/TimeAgo/index.jsx";
-import CommunityInfo from "components/subreddit/Sidebar/CommunityInfo/index.jsx";
-import { Button } from "components/ui/button";
-import { Card } from "components/ui/card";
-import { cn } from "lib/utils"; 
+import {
+  MessageSquare,
+  Share2,
+  Bookmark,
+  MoreHorizontal,
+  ExternalLink,
+  Trash2,
+} from "lucide-react";
+
+import AISummarizeButton from "../../post/AISummarizeButton";
+import VoteButtons from "../../post/VoteButtons";
+import TimeAgo from "../../shared/TimeAgo";
+import CommunityInfo from "../../subreddit/Sidebar/CommunityInfo";
+import { Button } from "../../ui/button";
+import { Card } from "../../ui/card";
+import { cn } from "../../../lib/utils";
 
 export default function PostCard({
   id,
@@ -27,190 +34,153 @@ export default function PostCard({
   comments = 0,
   createdAt,
   onVote,
+  onDelete,
   href = "#",
   className,
 }) {
-  const hasImage = !!imageUrl;
-  const hasLink = !!linkUrl;
-  const hasContent = !!content;
+  const [currentUser, setCurrentUser] = useState(null);
 
- const commentCount = comments;
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/profile");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (mounted && data?.username) setCurrentUser(data.username);
+      } catch { }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
-  // Check for updated count in local memory 
-  // useEffect(() => {
-  //   // 1. If the prop `comments` changes (e.g. API refresh), update state
-  //   //setCommentCount(comments);
+  const isOwner =
+    currentUser &&
+    author?.username &&
+    currentUser === author.username;
 
-  //   // 2. Check if we have a locally saved "newer" count
-  //   const savedCount = localStorage.getItem(`count_for_post_${id}`);
-  //   if (savedCount) {
-  //      // Only update if the saved count is different/newer
-  //      const parsed = parseInt(savedCount);
-  //      if (!isNaN(parsed) && parsed > comments) {
-  //          setCommentCount(parsed);
-  //      }
-  //   }
-  // }, [id, comments]);
+  const formatCount = (count) => {
+    if (count >= 1000) return `${(count / 1000).toFixed(1)}k`;
+    return count;
+  };
+
+  const handleDelete = async () => {
+    if (!confirm("Delete this post?")) return;
+    try {
+      const res = await fetch(`/api/posts/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) return alert("Failed to delete post");
+      onDelete?.();
+    } catch {
+      alert("Delete failed");
+    }
+  };
+
 
   return (
-    <Card className={cn("overflow-hidden hover:border-primary/20 transition-colors", className)}>
-      <div className="flex gap-3 p-4">
-        {/* Vote Buttons */}
-        <div className="flex-shrink-0">
-          <VoteButtons
-            initialVotes={votes}
-            initialVoteState={voteState}
-            onVote={onVote}
-            compact={false}
-          />
-        </div>
-
-        {/* Main Content */}
-        <div className="flex-1 min-w-0 space-y-3">
-          {/* Header: Community & Author */}
-          <div className="flex items-center gap-2 flex-wrap">
+    <Card className={cn(
+      "overflow-hidden border-border bg-card hover:bg-accent/5 transition-colors cursor-pointer",
+      className
+    )}>
+      <div className="p-3 flex flex-col gap-2">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
             {community && (
               <CommunityInfo
                 name={community.name}
                 members={community.members}
                 href={community.href}
+                className="text-foreground font-semibold hover:underline"
               />
             )}
-            <span className="text-xs text-muted-foreground">·</span>
-            <div className="flex items-center gap-2">
-              <UserAvatar
-                username={author?.username}
-                avatar={author?.avatar}
-                size="sm"
-              />
-              <Link
-                href={`/u/${author?.username || ""}`}
-                className="text-xs font-medium hover:underline"
-              >
-                u/{author?.username || "unknown"}
-              </Link>
-            </div>
             {createdAt && (
               <>
-                <span className="text-xs text-muted-foreground">·</span>
+                <span>·</span>
                 <TimeAgo timestamp={createdAt} />
               </>
             )}
           </div>
 
-          {/* Title */}
-          <Link href={href}>
-            <h3 className="text-lg font-semibold hover:text-primary transition-colors line-clamp-2">
-              {title}
-            </h3>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Button size="sm" className="rounded-full h-8 px-4 font-bold bg-blue-600 hover:bg-blue-700 text-white">
+              Join
+            </Button>
+            <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 hover:bg-secondary">
+              <MoreHorizontal className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
 
-          {/* Content */}
-          {hasContent && (
-            <p className="text-sm text-foreground/90 line-clamp-4 whitespace-pre-wrap">
-              {content}
-            </p>
-          )}
+        {/* Title */}
+        <Link href={href}>
+          <h3 className="text-[20px] font-bold leading-7 mb-1">{title}</h3>
+        </Link>
 
-          {/* Image */}
-          {hasImage && (
-            <div className="relative w-full rounded-lg overflow-hidden bg-muted">
+        {/* Content / Image */}
+        <div className="space-y-3">
+          {content && <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">{content}</p>}
+
+          {imageUrl && (
+            <div className="relative w-full rounded-xl overflow-hidden bg-muted/20 border border-border">
               <Image
                 src={imageUrl}
                 alt={title}
                 width={800}
                 height={600}
-                className="w-full h-auto object-cover"
+                className="w-full object-contain max-h-[512px]"
                 unoptimized
               />
             </div>
           )}
+        </div>
 
-          {/* Link Preview */}
-          {hasLink && linkPreview && (
-            <Link
-              href={linkUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block border rounded-lg overflow-hidden hover:border-primary/50 transition-colors"
-            >
-              <div className="flex">
-                {linkPreview.image && (
-                  <div className="relative w-32 h-24 flex-shrink-0 bg-muted">
-                    <Image
-                      src={linkPreview.image}
-                      alt={linkPreview.title || title}
-                      fill
-                      className="object-cover"
-                      unoptimized
-                    />
-                  </div>
-                )}
-                <div className="flex-1 p-3 min-w-0">
-                  <div className="flex items-center gap-1 mb-1">
-                    <ExternalLink className="w-3 h-3 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground truncate">
-                      {linkPreview.domain || new URL(linkUrl).hostname}
-                    </span>
-                  </div>
-                  <p className="text-sm font-medium line-clamp-1 mb-1">
-                    {linkPreview.title || title}
-                  </p>
-                  {linkPreview.description && (
-                    <p className="text-xs text-muted-foreground line-clamp-2">
-                      {linkPreview.description}
-                    </p>
-                  )}
-                </div>
-              </div>
+        {/* Footer */}
+        <div className="flex items-center gap-2 pt-1 flex-wrap">
+          {/* Votes */}
+          <VoteButtons
+            initialVotes={votes}
+            initialVoteState={voteState}
+            onVote={onVote}
+            horizontal={true}
+          />
+
+          {/* Comments Pill */}
+          <Button variant="secondary" size="sm" className="rounded-full h-9 bg-secondary/50 hover:bg-secondary/80 gap-2 border-none" asChild>
+            <Link href={`${href}#comments`}>
+              <MessageSquare className="w-5 h-5" />
+              <span className="font-bold text-xs">{formatCount(comments)}</span>
             </Link>
+          </Button>
+
+          {/* AI Summarize Pill */}
+          <AISummarizeButton
+            postId={id}
+            title={title}
+            content={content}
+            className="m-0"
+          />
+
+          {isOwner && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="rounded-full h-9 hover:bg-red-50 dark:hover:bg-red-900/10 text-red-500 gap-2"
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+            >
+              <Trash2 className="w-4 h-4" />
+              <span className="text-xs font-bold">Delete</span>
+            </Button>
           )}
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-1 pt-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 text-xs text-muted-foreground hover:text-foreground"
-              asChild
-            >
-              <Link href={`${href}#comments`}>
-                <MessageSquare className="w-4 h-4 mr-1.5" />
-                {commentCount} {commentCount === 1 ? "comment" : "comments"}
-              </Link>
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 text-xs text-muted-foreground hover:text-foreground"
-              aria-label="Share post"
-            >
-              <Share2 className="w-4 h-4 mr-1.5" />
-              Share
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 text-xs text-muted-foreground hover:text-foreground"
-              aria-label="Save post"
-            >
-              <Bookmark className="w-4 h-4 mr-1.5" />
-              Save
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-foreground"
-              aria-label="More options"
-            >
-              <MoreHorizontal className="w-4 h-4" />
-            </Button>
-          </div>
         </div>
       </div>
     </Card>
   );
 }
+

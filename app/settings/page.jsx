@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { ChevronRight, Eye } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "../../components/ui/button";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
-import { getSession } from "@/lib/session";
-import { cn } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../components/ui/tabs";
+import { Switch } from "../../components/ui/switch";
+import { getSession } from "../../lib/session";
+import { cn } from "../../lib/utils";
 
 /**
  * Reusable Row Component for consistency

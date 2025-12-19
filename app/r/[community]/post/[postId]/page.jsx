@@ -7,6 +7,7 @@ import { Button } from "components/ui/button";
 import { Separator } from "components/ui/separator";
 import VoteButtons from "components/post/VoteButtons";
 import AISummarizeButton from "components/post/AISummarizeButton";
+import PostActions from "components/post/PostActions";
 import {
     MessageSquare,
     Share,
@@ -32,35 +33,43 @@ export default function PostDetailPage() {
     const [notFound, setNotFound] = useState(false);
     const [comments, setComments] = useState([]);
 
-useEffect(() => {
-        const fetchPost = async () => {
+    useEffect(() => {
+        // Fetch post from database API
+        const loadPost = async () => {
             try {
-                setLoading(true);
-                const res = await fetch(`/api/posts/${postId}`);
-                
-                if (res.ok) {
-                    const rawData = await res.json();
-                    
-                    // --- DATA TRANSFORMATION (The Fix) ---
-                    const formattedPost = {
-                        ...rawData, // Keep all original API fields (title, user_email, etc.)
-                        
-                        // 1. Calculate 'type' since API doesn't send it
-                        type: rawData.picture_link ? 'image' : 'post',
-                        
-                        // 2. Convert single picture string into the Array of Objects your JSX expects
-                        picture_link: rawData.picture_link 
-                            ? [{ type: 'image', preview: rawData.picture_link }] 
-                            : []
-                    };
-                    // -------------------------------------
+                const response = await fetch(`/api/posts/${postId}`);
 
-                    setPost(formattedPost);
-                    setNotFound(false);
-                } else {
-                    console.error('Failed to fetch post');
-                    setNotFound(true);
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        setNotFound(true);
+                    } else {
+                        throw new Error('Failed to fetch post');
+                    }
+                    setLoading(false);
+                    return;
                 }
+
+                const data = await response.json();
+
+                // Transform API response to match component expectations
+                const transformedPost = {
+                    id: data.post_id,
+                    title: data.title,
+                    content: data.body,
+                    user_email: data.user_email, // Required for permission checks
+                    author: data.user_email?.split('@')[0] || 'user', // Extract username from email
+                    community: { name: data.community_name },
+                    upvotes: 0, // Will be fetched separately if needed
+                    comments: 0, // Will be fetched separately if needed
+                    createdAt: data.created_on,
+                    type: data.picture_link ? 'image' : 'post',
+                    media: data.picture_link ? [{ preview: data.picture_link, type: 'image' }] : null,
+                    pictureLink: data.picture_link,
+                    href: `/r/${data.community_name}/post/${data.post_id}`,
+                };
+
+                setPost(transformedPost);
+                setNotFound(false);
             } catch (error) {
                 console.error('Error loading post:', error);
                 setNotFound(true);
@@ -70,46 +79,55 @@ useEffect(() => {
         };
 
         if (postId) {
-            fetchPost();
+            loadPost();
         }
     }, [postId]);
 
-    useEffect(() => {
-        const fetchComments = async () => {
-            try {
-                const res = await fetch(`/api/posts/${postId}/comments`);
-                if (res.ok) {
-                    const data = await res.json();
-                    
-                    // Fetch votes for each comment
-                    const commentsWithVotes = await Promise.all(
-                        data.map(async (comment) => {
-                            try {
-                                const voteRes = await fetch(`/api/posts/${postId}/comments/${comment.comment_id}/votes`);
-                                if (voteRes.ok) {
-                                    const voteData = await voteRes.json();
-                                    return { ...comment, votes: voteData.VoteCount || 0 };
-                                }
-                            } catch (error) {
-                                console.error(`Error fetching votes for comment ${comment.comment_id}:`, error);
-                            }
-                            return { ...comment, votes: 0 };
-                        })
-                    );
-                    
-                    setComments(commentsWithVotes);
+   useEffect(() => {
+    const fetchComments = async () => {
+        try {
+            const res = await fetch(`/api/posts/${postId}/comments`);
+            
+            // 1. Handle "No Comments" (404) or other errors gracefully
+            if (!res.ok) {
+                if (res.status === 404) {
+                    setComments([]); // Zero comments is a valid state, not an error
                 } else {
                     console.error('Failed to fetch comments');
                 }
-            } catch (error) {
-                console.error('Error fetching comments:', error);
+                return; // Stop execution here so we don't call res.json() again
             }
-        };
 
-        if (postId) {
-            fetchComments();
+            // 2. Only read the stream ONCE
+            const data = await res.json();
+            
+            const commentsWithVotes = await Promise.all(
+                data.map(async (comment) => {
+                    try {
+                        const voteRes = await fetch(`/api/posts/${postId}/comments/${comment.comment_id}/votes`);
+                        if (voteRes.ok) {
+                            const voteData = await voteRes.json();
+                            
+                            // FIX: Ensure this is a NUMBER. 
+                            // Accessing 'VoteCount' directly as it is now returned from your SQL BIGINT sum
+                            const count = Number(voteData.VoteCount) || 0;
+                            return { ...comment, votes: count };
+                        }
+                    } catch (error) {
+                        console.error(`Error fetching votes for comment ${comment.comment_id}:`, error);
+                    }
+                    return { ...comment, votes: 0 };
+                })
+            );
+            
+            setComments(commentsWithVotes);
+        } catch (error) {
+            console.error('Error fetching comments:', error);
         }
-    }, [postId]);
+    };
+
+    if (postId) fetchComments();
+}, [postId]);
 
     const formatTimeAgo = (dateString) => {
         const date = new Date(dateString);
@@ -160,32 +178,44 @@ const handleCommentDeleted = (deletedCommentId) => {
     ));
     };
 
-    const handleCommentVote = async (commentId, direction) => {
-        const numericFlag = direction === 'up' ? 1 : -1;
-        try {
-            const res = await fetch(`/api/posts/${postId}/comments/${commentId}/votes`, {
+  const handleCommentVote = async (commentId, newVoteState) => {
+    try {
+        const url = `/api/posts/${postId}/comments/${commentId}/votes`;
+
+        // 1. Send the correct request based on the state from VoteButtons
+        if (newVoteState === 'up') {
+            await fetch(url, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ flag: numericFlag }), // 1 for upvote, -1 for downvote
+                body: JSON.stringify({ flag: 1 })
             });
-            if (res.ok) {
-                // Refetch votes for this comment
-                const voteRes = await fetch(`/api/posts/${postId}/comments/${commentId}/votes`);
-                if (voteRes.ok) {
-                    const voteData = await voteRes.json();
-                    setComments(prev => prev.map(c => 
-                        c.comment_id === commentId 
-                            ? { ...c, votes: voteData.VoteCount || 0 }
-                            : c
-                    ));
-                }
-            } else {
-                console.error('Failed to vote on comment');
-            }
-        } catch (error) {
-            console.error('Error voting on comment:', error);
+        } else if (newVoteState === 'down') {
+            await fetch(url, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ flag: -1 })
+            });
+        } else {
+            // This handles the 'null' state when a user un-clicks a button
+            await fetch(url, { method: 'DELETE' });
         }
-    };
+
+        // 2. Refresh only this comment's vote count from the server
+        const voteRes = await fetch(url);
+        if (voteRes.ok) {
+            const voteData = await voteRes.json();
+            
+            // Use Number() to ensure we don't pass an object to React
+            const updatedCount = Number(voteData.VoteCount) || 0;
+
+            setComments(prev => prev.map(c => 
+                c.comment_id === commentId ? { ...c, votes: updatedCount } : c
+            ));
+        }
+    } catch (err) {
+        console.error("Failed to vote on comment:", err);
+    }
+};
 
     if (loading) {
         return (
@@ -334,6 +364,7 @@ const handleCommentDeleted = (deletedCommentId) => {
 
                                     {/* AI Summarize Button - THE MAIN FEATURE */}
                                     <AISummarizeButton
+                                        postId={post.id}
                                         title={post.title}
                                         content={post.body || post.title}
                                         className="mb-4"
@@ -355,9 +386,7 @@ const handleCommentDeleted = (deletedCommentId) => {
                                             <Bookmark className="w-4 h-4" />
                                             Save
                                         </Button>
-                                        <Button variant="ghost" size="sm">
-                                            <MoreHorizontal className="w-4 h-4" />
-                                        </Button>
+                                        <PostActions post={post} />
                                     </div>
                                 </div>
                             </div>
@@ -376,7 +405,7 @@ const handleCommentDeleted = (deletedCommentId) => {
                                                 author={{ username: comment.user_email }} // Assuming email as username for now
                                                 content={comment.body}
                                                 createdAt={comment.created_on}
-                                                votes={comment.votes || 0}
+                                                votes={Number(comment.votes) || 0}
                                                 onVote={(type) => handleCommentVote(comment.comment_id, type)}
                                                 onDelete={handleCommentDeleted}
                                                 onEdit={handleCommentEdited}

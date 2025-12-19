@@ -2,17 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import SubredditHeader from "components/subreddit/SubredditHeader";
-import FeedCard from "components/shared/FeedCard/index";
-import { Card } from "components/ui/card";
-import { Button } from "components/ui/button";
+import { useSession } from "next-auth/react"; // Re-added
+import SubredditHeader from "../../../components/subreddit/SubredditHeader";
+import FeedCard from "../../../components/shared/FeedCard/index";
+import { Card } from "../../../components/ui/card";
+import { Button } from "../../../components/ui/button";
 import { Flame, TrendingUp, Clock, ArrowUpDown } from "lucide-react";
-import { cn } from "lib/utils";
+import { cn } from "../../../lib/utils";
 import Link from 'next/link';
-import { getCommunity } from "lib/community-store";
-
-
-const [loading, setLoading] = useState(true);
 
 function formatMembers(count) {
     if (typeof count === 'number') {
@@ -25,6 +22,7 @@ function formatMembers(count) {
 
 export default function CommunityPage() {
     const params = useParams();
+    const { data: session } = useSession(); // Get session
     // Decode URI component because params.community might have encoded characters if routed wildly
     const communityName = decodeURIComponent(params.community);
 
@@ -33,93 +31,156 @@ export default function CommunityPage() {
     const [communityData, setCommunityData] = useState(null);
     const [notFound, setNotFound] = useState(false);
 
+    // Admin Tools State
+    const [newAdminEmail, setNewAdminEmail] = useState("");
+    const [adminMsg, setAdminMsg] = useState("");
+    const [admins, setAdmins] = useState([]);
+
+    const isOwner = session?.user?.email === communityData?.community_owner;
+
+    const fetchAdmins = async () => {
+        try {
+            const res = await fetch(`/api/subreddits/${communityName}/admins`);
+            if (res.ok) {
+                const data = await res.json();
+                setAdmins(data);
+            }
+        } catch (error) {
+            console.error("Error fetching admins:", error);
+        }
+    };
+
+    useEffect(() => {
+        if (isOwner) {
+            fetchAdmins();
+        }
+    }, [communityName]);
+
+    const isAdmin = admins.some(a => a.user_email === session?.user?.email);
+    const isOwnerVerified = session?.user?.email === communityData?.community_owner;
+
+    const isModOrOwner = isOwner || isAdmin;
+
+
+    const handleAddAdmin = async () => {
+        if (!newAdminEmail) return;
+        try {
+            const res = await fetch(`/api/subreddits/${communityName}/admins`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userEmail: newAdminEmail })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setAdminMsg("Admin added!");
+                setNewAdminEmail("");
+                fetchAdmins(); // Refresh list
+            } else {
+                setAdminMsg(data.error || "Failed to add admin");
+            }
+        } catch (error) {
+            console.error("Error adding admin:", error);
+            setAdminMsg("Error adding admin");
+        }
+    };
+
+    const handleRemoveAdmin = async (email) => {
+        try {
+            const res = await fetch(`/api/subreddits/${communityName}/admins`, {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userEmail: email })
+            });
+            if (res.ok) {
+                fetchAdmins(); // Refresh list
+            } else {
+                console.error("Failed to remove admin");
+            }
+        } catch (error) {
+            console.error("Error removing admin:", error);
+        }
+    };
+
     // Load Community Data
-    const loadCommunityData = () => {
-        if (typeof window === 'undefined') return;
+    const loadCommunityData = async () => {
+        try {
+            const response = await fetch(`/api/subreddits/${communityName}`);
+            const membersResponse = await fetch(`/api/subreddits/${communityName}/members`);
+            const membersCount = membersResponse.ok ? await membersResponse.json() : 0;
+            console.log('Members count:', membersCount);
 
-        const data = getCommunity(communityName);
-        console.log('Loading community:', communityName, 'Found:', data);
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Loaded community:', data);
 
-        if (data) {
-            setCommunityData(data);
-            setNotFound(false);
-        } else {
-            console.error("Community not found:", communityName);
+                // Map API data to component state
+                setCommunityData({
+                    ...data,
+                    icon: data.community_photo_link,
+                    createdAt: data.created_on,
+                    members: membersCount,
+                    banner: data.banner_link || null,
+                    color: data.theme_color || "from-blue-500 to-blue-600"
+                });
+
+                setNotFound(false);
+            } else {
+                console.error("Community not found:", communityName);
+                setNotFound(true);
+            }
+        } catch (error) {
+            console.error("Error loading community:", error);
             setNotFound(true);
         }
     };
 
     useEffect(() => {
-        // Ensure we're on the client
-        if (typeof window === 'undefined') return;
-
         loadCommunityData();
-
-        // Listen for updates (e.g. from Join/Leave button)
-        const handleUpdate = (e) => {
-            if (e.detail === communityName) {
-                loadCommunityData();
-            }
-        };
-
-        window.addEventListener('community-updated', handleUpdate);
-        return () => window.removeEventListener('community-updated', handleUpdate);
     }, [communityName]);
 
 
+    // Load Posts
     useEffect(() => {
-    const fetchPosts = async () => {
-        try {
-            setLoading(true);
-            // Call your API route with the communityName query parameter
-            const res = await fetch(`/api/posts?communityName=${encodeURIComponent(communityName)}`);
-            
-            if (res.ok) {
-                const data = await res.json();
-                
-                // Map DB fields (post_id, user_email, body) 
-                // to the props your FeedCard/Frontend expects
-                const formattedPosts = data.FeedData.map(p => ({
-                    id: p.post_id,
-                    title: p.title,
-                    content: p.body,
-                    author: { username: p.user_email?.split('@')[0] || "unknown", avatar: null },
-                    community: { name: p.community_name, href: `/r/${p.community_name}` },
-                    votes: p.upvotes || 0,
-                    comments: p.comment_count || 0, // Ensure your DB query returns this!
-                    createdAt: p.created_on,
-                    href: `/r/${p.community_name}/post/${p.post_id}`,
-                    type: p.picture_link ? 'image' : 'post',
-                    media: p.picture_link
-                }));
-                console.log(`comments count:${comments}`);
+        const fetchPosts = async () => {
+            try {
+                const response = await fetch(`/api/posts?communityName=${communityName}`);
+                if (response.ok) {
+                    const data = await response.json();
 
-                setPosts(formattedPosts);
-            } else {
-                console.error("Failed to fetch posts from API");
+                    // Map API posts to component format
+                    const mappedPosts = (data.FeedData || []).map(post => ({
+                        id: post.post_id,
+                        title: post.title,
+                        content: post.body,
+                        author: {
+                            username: post.username || "Unknown",
+                            avatar: post.profile_picture_link
+                        },
+                        community: {
+                            name: post.community_name,
+                            href: `/r/${post.community_name}`
+                        },
+                        votes: post.upvotes || 0,
+                        comments: post.comment_count || 0,
+                        createdAt: post.created_on,
+                        href: `/r/${post.community_name}/post/${post.post_id}`,
+                        type: post.type || 'text',
+                        media: post.media
+                    }));
+
+                    setPosts(mappedPosts);
+                } else {
+                    console.error("Failed to load posts");
+                }
+            } catch (error) {
+                console.error("Error loading posts:", error);
             }
-        } catch (error) {
-            console.error("Error connecting to API:", error);
-        } finally {
-            setLoading(false);
+        };
+
+        if (communityName) {
+            fetchPosts();
         }
-    };
-
-    if (communityName) {
-        fetchPosts();
-    }
-    // Listen for the custom event we just created
-    const handlePostUpdate = () => {
-        console.log("Post updated, refreshing community feed...");
-        fetchPosts();
-    };
-
-    window.addEventListener('post-updated', handlePostUpdate);
-    
-    return () => {
-        window.removeEventListener('post-updated', handlePostUpdate);
-    };
-}, [communityName]);
+    }, [communityName]);
 
     const sortOptions = [
         { name: "Best", value: "best", icon: Flame },
@@ -149,16 +210,7 @@ export default function CommunityPage() {
         );
     }
 
-    // Add this check before your main return #######
-if (loading) {
-    return (
-        <div className="min-h-screen bg-background flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-    );
-}
-
-if (!communityData && !loading) return <NotFoundUI />; // Your existing notFound logic
+    if (!communityData) return <div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>;
 
     return (
         <div className="min-h-screen bg-background">
@@ -173,7 +225,7 @@ if (!communityData && !loading) return <NotFoundUI />; // Your existing notFound
             </div>
 
             {/* Community Header */}
-            <div className="max-w-5xl mx-auto px-4">
+            <div className="max-w-[1100px] mx-auto px-4">
                 <div className="relative -mt-12 md:-mt-16">
                     {/* Community Icon */}
                     <div className="flex items-end gap-4 mb-4">
@@ -196,14 +248,14 @@ if (!communityData && !loading) return <NotFoundUI />; // Your existing notFound
                             <p className="text-sm text-muted-foreground font-medium px-1">r/{communityName}</p>
                         </div>
                         <div className="pb-4">
-                            <SubredditHeader communityId={communityName} />
+                            <SubredditHeader communityId={communityName} owner={communityData?.community_owner} />
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* Main Content Area */}
-            <div className="max-w-5xl mx-auto px-4 mt-6">
+            <div className="max-w-[1100px] mx-auto px-4 mt-6">
                 <div className="flex gap-6">
                     {/* Posts Feed */}
                     <div className="flex-1 w-full min-w-0">
@@ -229,7 +281,7 @@ if (!communityData && !loading) return <NotFoundUI />; // Your existing notFound
                         </Card>
 
                         {/* Posts */}
-                        <FeedCard postList={posts} />
+                        <FeedCard postList={posts} communityName={communityName} />
                         {posts.length === 0 && (
                             <div className="text-center py-10 opacity-50">
                                 <p>No posts yet. Be the first to post!</p>
@@ -261,12 +313,8 @@ if (!communityData && !loading) return <NotFoundUI />; // Your existing notFound
                                     <span className="text-xs text-muted-foreground">Members</span>
                                 </div>
                                 <div className="flex flex-col">
-                                    {/* Mock online count loosely based on member count */}
-                                    <span className="font-bold text-lg">
-                                        {typeof communityData.members === 'number'
-                                            ? Math.max(5, Math.floor(communityData.members * 0.05))
-                                            : '124'
-                                        }
+                                    <span className="font-bold text-sm">
+                                        Guess how many
                                     </span>
                                     <span className="text-xs text-muted-foreground">Online</span>
                                 </div>
@@ -280,6 +328,59 @@ if (!communityData && !loading) return <NotFoundUI />; // Your existing notFound
                                 </Button>
                             </Link>
                         </Card>
+
+                        {/* Mod Tools for Owner/Admin */}
+                        {isModOrOwner && (
+                            <Card className="p-4 mt-4">
+                                <h2 className="font-bold text-sm mb-3">Mod Tools</h2>
+                                <Link href={`/r/${communityName}/edit`}>
+                                    <Button className="w-full mb-4" variant="outline">
+                                        Edit Community
+                                    </Button>
+                                </Link>
+
+                                {/* Manage Admins - Owner Only */}
+                                {isOwner && (
+                                    <div className="border-t pt-4">
+                                        <h2 className="font-bold text-sm mb-3">Manage Admins</h2>
+                                        <div className="space-y-2">
+                                            <div className="text-xs text-muted-foreground mb-1">Add a new admin</div>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="email"
+                                                    placeholder="User Email"
+                                                    value={newAdminEmail}
+                                                    onChange={(e) => setNewAdminEmail(e.target.value)}
+                                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                                />
+                                                <Button size="sm" onClick={handleAddAdmin}>Add</Button>
+                                            </div>
+                                            {adminMsg && <p className="text-xs text-blue-500 mt-1">{adminMsg}</p>}
+                                        </div>
+
+                                        <div className="mt-4">
+                                            <div className="text-xs text-muted-foreground mb-2 font-semibold">Current Admins</div>
+                                            <div className="space-y-2">
+                                                {admins.length === 0 && <p className="text-xs text-muted-foreground italic">No admins yet.</p>}
+                                                {admins.map((admin) => (
+                                                    <div key={admin.user_email} className="flex items-center justify-between text-sm bg-muted/50 p-2 rounded-md">
+                                                        <span className="truncate max-w-[150px]" title={admin.user_email}>{admin.user_email}</span>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-6 px-2 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                                            onClick={() => handleRemoveAdmin(admin.user_email)}
+                                                        >
+                                                            Remove
+                                                        </Button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </Card>
+                        )}
 
                         {/* Community Rules Card */}
                         <Card className="p-4 mt-4">
