@@ -7,6 +7,7 @@ import { Button } from "components/ui/button";
 import { Separator } from "components/ui/separator";
 import VoteButtons from "components/post/VoteButtons";
 import AISummarizeButton from "components/post/AISummarizeButton";
+import PostActions from "components/post/PostActions";
 import {
     MessageSquare,
     Share,
@@ -32,51 +33,42 @@ export default function PostDetailPage() {
     const [notFound, setNotFound] = useState(false);
 
     useEffect(() => {
-        // Load post from localStorage or use mock data
-        const loadPost = () => {
+        // Fetch post from database API
+        const loadPost = async () => {
             try {
-                const posts = JSON.parse(localStorage.getItem('posts') || '[]');
-                let foundPost = posts.find(p => p.id == postId || p.id === parseInt(postId));
+                const response = await fetch(`/api/posts/${postId}`);
 
-                // If no post found, use mock data for testing AI feature
-                if (!foundPost) {
-                    const mockPosts = [
-                        {
-                            id: 1,
-                            title: "Understanding React Hooks and Their Benefits",
-                            content: "React Hooks revolutionized how we write React components. They allow us to use state and other React features without writing a class. The useState hook lets us add state to functional components, making it easy to manage component state. The useEffect hook handles side effects like data fetching, subscriptions, and manual DOM manipulations. Hooks make code more reusable and easier to understand by allowing you to extract stateful logic from components. They also reduce the complexity of component hierarchies and make it easier to share logic between components without using higher-order components or render props.",
-                            author: "demo_user",
-                            community: { name: community },
-                            upvotes: 150,
-                            comments: 23,
-                            createdAt: new Date(Date.now() - 3600000).toISOString(),
-                            type: 'post',
-                            href: `/r/${community}/post/1`,
-                        },
-                        {
-                            id: 2,
-                            title: "Getting Started with Next.js 14 App Router",
-                            content: "Next.js 14 introduces powerful new features including Server Actions and improved performance. The App Router provides a new way to build applications with React Server Components. Server Actions allow you to run server-side code directly from your components without creating API routes. The new metadata API makes SEO optimization easier than ever before. Turbopack integration speeds up local development significantly, making the developer experience much better.",
-                            author: "nextjs_fan",
-                            community: { name: community },
-                            upvotes: 89,
-                            comments: 12,
-                            createdAt: new Date(Date.now() - 7200000).toISOString(),
-                            type: 'post',
-                            href: `/r/${community}/post/2`,
-                        }
-                    ];
-
-                    // Try matching by numeric id, string id, or legacy ids like 'post1'
-                    foundPost = mockPosts.find(p => p.id == postId || p.id === parseInt(postId) || p.id === Number(postId) || p.id === `post${postId}` || p.id === `post${String(postId)}`);
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        setNotFound(true);
+                    } else {
+                        throw new Error('Failed to fetch post');
+                    }
+                    setLoading(false);
+                    return;
                 }
 
-                if (foundPost) {
-                    setPost(foundPost);
-                    setNotFound(false);
-                } else {
-                    setNotFound(true);
-                }
+                const data = await response.json();
+
+                // Transform API response to match component expectations
+                const transformedPost = {
+                    id: data.post_id,
+                    title: data.title,
+                    content: data.body,
+                    user_email: data.user_email, // Required for permission checks
+                    author: data.user_email?.split('@')[0] || 'user', // Extract username from email
+                    community: { name: data.community_name },
+                    upvotes: 0, // Will be fetched separately if needed
+                    comments: 0, // Will be fetched separately if needed
+                    createdAt: data.created_on,
+                    type: data.picture_link ? 'image' : 'post',
+                    media: data.picture_link ? [{ preview: data.picture_link, type: 'image' }] : null,
+                    pictureLink: data.picture_link,
+                    href: `/r/${data.community_name}/post/${data.post_id}`,
+                };
+
+                setPost(transformedPost);
+                setNotFound(false);
             } catch (error) {
                 console.error('Error loading post:', error);
                 setNotFound(true);
@@ -246,6 +238,7 @@ export default function PostDetailPage() {
 
                                     {/* AI Summarize Button - THE MAIN FEATURE */}
                                     <AISummarizeButton
+                                        postId={post.id}
                                         title={post.title}
                                         content={post.content || post.title}
                                         className="mb-4"
@@ -267,9 +260,7 @@ export default function PostDetailPage() {
                                             <Bookmark className="w-4 h-4" />
                                             Save
                                         </Button>
-                                        <Button variant="ghost" size="sm">
-                                            <MoreHorizontal className="w-4 h-4" />
-                                        </Button>
+                                        <PostActions post={post} />
                                     </div>
                                 </div>
                             </div>

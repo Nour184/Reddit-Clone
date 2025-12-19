@@ -1,4 +1,3 @@
-import { dummyPosts, dummyCommunities, dummyProfiles } from "./dummyPosts";
 
 // ==========================================
 // SEARCH API UTILITIES
@@ -9,40 +8,39 @@ import { dummyPosts, dummyCommunities, dummyProfiles } from "./dummyPosts";
  * Endpoint: GET /api/search/posts?q={query}
  */
 export async function fetchSearchResults(query: string) {
-    // TODO: Replace with real API call
-    // const res = await fetch(`/api/search/posts?q=${encodeURIComponent(query)}`);
-    // if (!res.ok) throw new Error('Failed to fetch posts');
-    // return res.json();
+    // Current API does not support post search by text query.
+    // Returning empty array until backend implementation.
+    // TODO: Implement GET /api/posts?q={query} or similar
 
-    // MOCK IMPLEMENTATION
-    await new Promise((resolve) => setTimeout(resolve, 300)); // Simulate latency
-    if (!query) return [];
-
-    const lowerQuery = query.toLowerCase();
-    return dummyPosts.filter(
-        (post) =>
-            post.title.toLowerCase().includes(lowerQuery) ||
-            post.content.toLowerCase().includes(lowerQuery) ||
-            post.subreddit.toLowerCase().includes(lowerQuery)
-    );
+    return [];
 }
 
 /**
  * Search Communities
- * Endpoint: GET /api/search/communities?q={query}
+ * Endpoint: GET /api/subreddits?q={query}
  */
 export async function fetchCommunities(query: string) {
-    // TODO: Replace with real API call
-    // const res = await fetch(`/api/search/communities?q=${encodeURIComponent(query)}`);
-    // return res.json();
+    try {
+        if (!query) return [];
 
-    // MOCK IMPLEMENTATION
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    if (!query) return dummyCommunities;
+        // Use the real API
+        const res = await fetch(`/api/subreddits?q=${encodeURIComponent(query)}&limit=5`);
+        if (!res.ok) return [];
 
-    return dummyCommunities.filter(c =>
-        c.name.toLowerCase().includes(query.toLowerCase())
-    );
+        const data = await res.json();
+
+        // Transform to match generic search component interface if needed
+        // The API returns array of community objects.
+        return data.map((c: any) => ({
+            name: c.community_name || c.name, // Adjust based on API structure
+            members: 0, // API might not return members count in search list, set default
+            icon: c.icon || null,
+            color: 'from-blue-500 to-cyan-500' // Default or fetch from DB if available
+        }));
+    } catch (error) {
+        console.error("Error searching communities:", error);
+        return [];
+    }
 }
 
 /**
@@ -50,15 +48,7 @@ export async function fetchCommunities(query: string) {
  * Endpoint: GET /api/search/users?q={query}
  */
 export async function fetchProfiles(query: string) {
-    // TODO: Replace with real API call
-    // const res = await fetch(`/api/search/users?q=${encodeURIComponent(query)}`);
-    // return res.json();
-
-    // MOCK IMPLEMENTATION
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    if (!query) return dummyProfiles;
-
-    return dummyProfiles.filter(p =>
-        p.username.toLowerCase().includes(query.toLowerCase())
-    );
+    // Current API does not support user search.
+    // Returning empty array until backend implementation. 
+    return [];
 }

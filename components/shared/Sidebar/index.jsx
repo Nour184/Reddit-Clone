@@ -7,7 +7,6 @@ import { Home, TrendingUp, Plus, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "lib/utils";
 import { useState, useEffect } from "react";
 import { getSession } from "lib/session";
-import { getJoinedCommunities, getAllCommunities } from "lib/community-store";
 
 // Initial popular communities (fallback)
 const DEFAULT_POPULAR = [
@@ -49,39 +48,67 @@ export default function Sidebar() {
       setCurrentUser(sessionUser);
     }
 
-    // Load communities
-    const all = getAllCommunities();
-    setAllCommunities(all);
+    // Fetch all communities from database
+    const fetchAllCommunities = async () => {
+      try {
+        const res = await fetch('/api/subreddits');
+        if (res.ok) {
+          const data = await res.json();
+          const formatted = data.map(c => ({
+            name: c.name,
+            members: '0', // We can fetch member count separately if needed
+            color: "from-blue-400 to-purple-500" // Default gradient
+          }));
+          setAllCommunities(formatted);
+        } else {
+          setAllCommunities(DEFAULT_POPULAR);
+        }
+      } catch (err) {
+        console.error('Failed to fetch communities:', err);
+        setAllCommunities(DEFAULT_POPULAR);
+      }
+    };
 
-    // Load joined communities
-    const joinedNames = getJoinedCommunities();
-    const joinedDetails = joinedNames.map(name => {
-      const found = all.find(c => c.name.toLowerCase() === name.toLowerCase());
-      return found || { name: name, color: "from-gray-400 to-gray-600" }; // fallback
-    });
-    setJoinedCommunities(joinedDetails);
+    // Fetch joined communities from database
+    const fetchJoinedCommunities = async () => {
+      if (!sessionUser) {
+        setJoinedCommunities([]);
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/me/memberships');
+        if (res.ok) {
+          const data = await res.json();
+          const formatted = data.map(membership => ({
+            name: membership.community_name,
+            members: '0',
+            color: "from-blue-400 to-purple-500"
+          }));
+          setJoinedCommunities(formatted);
+        } else {
+          setJoinedCommunities([]);
+        }
+      } catch (err) {
+        console.error('Failed to fetch joined communities:', err);
+        setJoinedCommunities([]);
+      }
+    };
+
+    fetchAllCommunities();
+    fetchJoinedCommunities();
 
     // Listen for session updates
     const handleSessionUpdate = () => {
       const updated = getSession();
       setCurrentUser(updated);
 
-      // Reload joined communities on session change (e.g. login/logout could change local storage context ideally, 
-      // but here it's shared LS, though maybe we want to refresh)
-      const freshJoinedNames = getJoinedCommunities();
-      const all = getAllCommunities(); // refresh in case new community created
-      setAllCommunities(all);
-
-      const freshJoinedDetails = freshJoinedNames.map(name => {
-        const found = all.find(c => c.name.toLowerCase() === name.toLowerCase());
-        return found || { name: name, color: "from-gray-400 to-gray-600" };
-      });
-      setJoinedCommunities(freshJoinedDetails);
+      // Re-fetch communities when session changes
+      fetchAllCommunities();
+      fetchJoinedCommunities();
     };
 
     window.addEventListener("session-updated", handleSessionUpdate);
-    // Also listen for community updates (custom event from store if we had one, but we can rely on page navigation or implement a custom event)
-    // For now, let's just listen to storage event to catch LS changes across tabs or just assume simplistic refresh
 
     return () => window.removeEventListener("session-updated", handleSessionUpdate);
   }, []);

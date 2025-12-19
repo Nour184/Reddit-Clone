@@ -120,35 +120,35 @@ export default function CreatePostPage() {
         if (!session?.loggedIn) router.push("/auth/login");
     }, []);
 
-    /* ---------- Communities (joined only) ---------- */
+    /* ---------- Communities (all communities from database) ---------- */
     useEffect(() => {
-        const fetchJoined = async () => {
+        const fetchCommunities = async () => {
             try {
-                const res = await fetch("/api/me/memberships");
+                const res = await fetch("/api/subreddits");
                 if (!res.ok) {
-                    // If unauthorized or error, leave communities empty
+                    // If error, leave communities empty
                     setCommunities([]);
                     return;
                 }
                 const data = await res.json();
-                // API returns rows from joined_communities with `community_name`
-                const joined = data.map((r) => ({
-                    name: r.community_name,
-                    slug: r.community_name.toLowerCase(),
+                // API returns communities with `name` field
+                const allCommunities = data.map((r) => ({
+                    name: r.name,
+                    slug: r.name.toLowerCase(),
                 }));
-                setCommunities(joined);
+                setCommunities(allCommunities);
 
                 const param = searchParams.get("community");
                 if (param) {
-                    const found = joined.find(c => c.slug === param.toLowerCase());
+                    const found = allCommunities.find(c => c.slug === param.toLowerCase());
                     if (found) setSelectedCommunity(found);
                 }
             } catch (err) {
-                console.error("Failed to fetch joined communities:", err);
+                console.error("Failed to fetch communities:", err);
                 setCommunities([]);
             }
         };
-        fetchJoined();
+        fetchCommunities();
     }, [searchParams]);
 
     /* ---------- Validation ---------- */
@@ -230,24 +230,24 @@ export default function CreatePostPage() {
 
                 {dropdownOpen && (
                     <div className="absolute bg-white border w-full z-10">
-                            {communities.length === 0 ? (
-                                <div className="p-2 text-sm text-muted-foreground">
-                                    You haven't joined any communities. Join one to post.
+                        {communities.length === 0 ? (
+                            <div className="p-2 text-sm text-muted-foreground">
+                                No communities available. Create one first!
+                            </div>
+                        ) : (
+                            communities.map(c => (
+                                <div
+                                    key={c.slug}
+                                    onClick={() => {
+                                        setSelectedCommunity(c);
+                                        setDropdownOpen(false);
+                                    }}
+                                    className="p-2 hover:bg-gray-100 cursor-pointer"
+                                >
+                                    r/{c.name}
                                 </div>
-                            ) : (
-                                communities.map(c => (
-                                    <div
-                                        key={c.slug}
-                                        onClick={() => {
-                                            setSelectedCommunity(c);
-                                            setDropdownOpen(false);
-                                        }}
-                                        className="p-2 hover:bg-gray-100 cursor-pointer"
-                                    >
-                                        r/{c.name}
-                                    </div>
-                                ))
-                            )}
+                            ))
+                        )}
                     </div>
                 )}
             </div>

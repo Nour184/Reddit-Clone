@@ -66,60 +66,47 @@ export default function CommunityPage() {
 
     // Load Posts
     useEffect(() => {
-        // Mock posts - replace with API call
-        const mockPosts = [
-            {
-                id: 1,
-                title: "Welcome to r/" + communityName,
-                content: "This is a welcome post for the community.",
-                author: { username: "admin", avatar: null },
-                community: { name: communityName, href: `/r/${communityName}` },
-                votes: 150,
-                comments: 23,
-                createdAt: new Date(Date.now() - 3600000).toISOString(),
-                href: `/r/${communityName}/post/1`,
+        const fetchPosts = async () => {
+            try {
+                const res = await fetch(`/api/posts?communityName=${encodeURIComponent(communityName)}`);
+
+                if (!res.ok) {
+                    throw new Error("Failed to fetch posts");
+                }
+
+                const data = await res.json();
+
+                // Transform API data to match FeedCard expectations
+                const transformedPosts = (data.FeedData || []).map(post => ({
+                    id: post.post_id,
+                    title: post.title,
+                    content: post.body,
+                    author: {
+                        username: post.user_email?.split('@')[0] || 'user',
+                        avatar: null
+                    },
+                    community: {
+                        name: post.community_name,
+                        href: `/r/${post.community_name}`
+                    },
+                    votes: post.upvotes || 0,
+                    comments: post.comments || 0,
+                    createdAt: post.created_on,
+                    href: `/r/${post.community_name}/post/${post.post_id}`,
+                    type: post.picture_link ? 'image' : 'post',
+                    media: post.picture_link ? [{ preview: post.picture_link, type: 'image' }] : null
+                }));
+
+                setPosts(transformedPosts);
+            } catch (error) {
+                console.error("Error loading posts:", error);
+                setPosts([]);
             }
-        ];
+        };
 
-        // Load local posts
-        try {
-            const localPosts = JSON.parse(localStorage.getItem('posts') || '[]');
-
-            // Filter posts for this community
-            const communityLocalPosts = localPosts.filter(p => {
-                if (!p.community) return false;
-
-                // Handle complex object or simple string community
-                let pName = "";
-                if (typeof p.community === 'string') pName = p.community;
-                else if (p.community.name) pName = p.community.name;
-
-                // Normalizing names: remove 'r/' prefix and lowercase
-                const normalize = (s) => s.toLowerCase().replace(/^r\//, '').trim();
-
-                return normalize(pName) === normalize(communityName);
-            }).map(p => ({
-                id: p.id,
-                title: p.title,
-                content: p.content,
-                author: { username: p.author || "CurrentUser", avatar: null },
-                community: { name: communityName, href: `/r/${communityName}` },
-                votes: p.upvotes || 0,
-                comments: p.comments || 0,
-                createdAt: p.createdAt,
-                href: `/r/${communityName}/post/${p.id}`,
-                type: p.type,
-                media: p.media
-            }));
-
-            const allPosts = [...communityLocalPosts, ...mockPosts];
-            allPosts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            setPosts(allPosts);
-        } catch (e) {
-            console.error("Error loading posts", e);
-            setPosts(mockPosts);
+        if (communityName) {
+            fetchPosts();
         }
-
     }, [communityName]);
 
     const sortOptions = [
