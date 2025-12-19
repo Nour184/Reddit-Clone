@@ -3,7 +3,7 @@
 // components/comments/CommentCard.jsx
 import { useState } from "react";
 import Link from "next/link";
-import { MessageSquare, Share2, MoreHorizontal, Reply } from "lucide-react";
+import { MessageSquare, Share2, MoreHorizontal, Reply, Pencil, Trash2 } from "lucide-react";
 import VoteButtons from "components/post/VoteButtons/index.jsx";
 import UserAvatar from "components/user/UserAvatar/index.jsx";
 import TimeAgo from "components/shared/TimeAgo/index.jsx";
@@ -11,6 +11,9 @@ import ShareDropdown from "components/post/ShareDropdown/index.jsx";
 import { Button } from "components/ui/button";
 import { cn } from "../../lib/utils";
 import CommentForm from "./CommentForm";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "components/ui/dropdown-menu";
+import { useSession } from "next-auth/react"; 
+
 
 /**
  * CommentCard Component
@@ -37,7 +40,6 @@ import CommentForm from "./CommentForm";
  * - className: string - Additional CSS classes
  */
 
-const currentUserEmail = "hamadahelal@forfun.com"; //get the real current user email
 
 export default function CommentCard({
     id,
@@ -59,8 +61,9 @@ export default function CommentCard({
     const [isReplying, setIsReplying] = useState(false);
     const [isEditing, setIsEditing] = useState(false); //comment is being edited
     const [isDeleting, setIsDeleting] = useState(false); //comment is being deleted
-    //const { data: session } = useSession(); 
-    //const currentUserEmail = session 
+    const { data: session } = useSession(); 
+
+    const currentUserEmail = session?.user?.email; //get the real current user email
 
     const isOwner = author?.username === currentUserEmail;
 
@@ -78,7 +81,7 @@ export default function CommentCard({
 
     const handleEditSubmit = async (newText) => {
         try {
-            const res = await fetch(`/api/comments/${id}`, {
+            const res = await fetch(`/api/posts/5/comments/${id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ body: newText }),
@@ -102,7 +105,7 @@ export default function CommentCard({
         
         try {
             setIsDeleting(true);
-            const res = await fetch(`/api/comments/${id}`, {
+            const res = await fetch(`/api/posts/59/comments/${id}`, {
                 method: "DELETE",
             });
 
@@ -123,6 +126,11 @@ export default function CommentCard({
     const indentClass = depth > 0 ? `ml-${Math.min(depth * 4, 20)}` : "";
 
     if (isDeleting) return null; //hide comment when deletedd immediatly
+    console.log("Debug Owner Check:", {
+    commentAuthor: author?.username,
+    myEmail: currentUserEmail,
+    isOwner: isOwner
+});
   return (
         <div className={cn("group", className)}>
             <div className={cn("flex gap-3 py-2", indentClass)}>

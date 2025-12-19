@@ -11,6 +11,9 @@ import { cn } from "lib/utils";
 import Link from 'next/link';
 import { getCommunity } from "lib/community-store";
 
+
+const [loading, setLoading] = useState(true);
+
 function formatMembers(count) {
     if (typeof count === 'number') {
         if (count >= 1000000) return (count / 1000000).toFixed(1) + 'm';
@@ -64,63 +67,59 @@ export default function CommunityPage() {
     }, [communityName]);
 
 
-    // Load Posts
     useEffect(() => {
-        // Mock posts - replace with API call
-        const mockPosts = [
-            {
-                id: 1,
-                title: "Welcome to r/" + communityName,
-                content: "This is a welcome post for the community.",
-                author: { username: "admin", avatar: null },
-                community: { name: communityName, href: `/r/${communityName}` },
-                votes: 150,
-                comments: 23,
-                createdAt: new Date(Date.now() - 3600000).toISOString(),
-                href: `/r/${communityName}/post/1`,
-            }
-        ];
-
-        // Load local posts
+    const fetchPosts = async () => {
         try {
-            const localPosts = JSON.parse(localStorage.getItem('posts') || '[]');
+            setLoading(true);
+            // Call your API route with the communityName query parameter
+            const res = await fetch(`/api/posts?communityName=${encodeURIComponent(communityName)}`);
+            
+            if (res.ok) {
+                const data = await res.json();
+                
+                // Map DB fields (post_id, user_email, body) 
+                // to the props your FeedCard/Frontend expects
+                const formattedPosts = data.FeedData.map(p => ({
+                    id: p.post_id,
+                    title: p.title,
+                    content: p.body,
+                    author: { username: p.user_email?.split('@')[0] || "unknown", avatar: null },
+                    community: { name: p.community_name, href: `/r/${p.community_name}` },
+                    votes: p.upvotes || 0,
+                    comments: p.comment_count || 0, // Ensure your DB query returns this!
+                    createdAt: p.created_on,
+                    href: `/r/${p.community_name}/post/${p.post_id}`,
+                    type: p.picture_link ? 'image' : 'post',
+                    media: p.picture_link
+                }));
+                console.log(`comments count:${comments}`);
 
-            // Filter posts for this community
-            const communityLocalPosts = localPosts.filter(p => {
-                if (!p.community) return false;
-
-                // Handle complex object or simple string community
-                let pName = "";
-                if (typeof p.community === 'string') pName = p.community;
-                else if (p.community.name) pName = p.community.name;
-
-                // Normalizing names: remove 'r/' prefix and lowercase
-                const normalize = (s) => s.toLowerCase().replace(/^r\//, '').trim();
-
-                return normalize(pName) === normalize(communityName);
-            }).map(p => ({
-                id: p.id,
-                title: p.title,
-                content: p.content,
-                author: { username: p.author || "CurrentUser", avatar: null },
-                community: { name: communityName, href: `/r/${communityName}` },
-                votes: p.upvotes || 0,
-                comments: p.comments || 0,
-                createdAt: p.createdAt,
-                href: `/r/${communityName}/post/${p.id}`,
-                type: p.type,
-                media: p.media
-            }));
-
-            const allPosts = [...communityLocalPosts, ...mockPosts];
-            allPosts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            setPosts(allPosts);
-        } catch (e) {
-            console.error("Error loading posts", e);
-            setPosts(mockPosts);
+                setPosts(formattedPosts);
+            } else {
+                console.error("Failed to fetch posts from API");
+            }
+        } catch (error) {
+            console.error("Error connecting to API:", error);
+        } finally {
+            setLoading(false);
         }
+    };
 
-    }, [communityName]);
+    if (communityName) {
+        fetchPosts();
+    }
+    // Listen for the custom event we just created
+    const handlePostUpdate = () => {
+        console.log("Post updated, refreshing community feed...");
+        fetchPosts();
+    };
+
+    window.addEventListener('post-updated', handlePostUpdate);
+    
+    return () => {
+        window.removeEventListener('post-updated', handlePostUpdate);
+    };
+}, [communityName]);
 
     const sortOptions = [
         { name: "Best", value: "best", icon: Flame },
@@ -150,7 +149,16 @@ export default function CommunityPage() {
         );
     }
 
-    if (!communityData) return <div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>;
+    // Add this check before your main return #######
+if (loading) {
+    return (
+        <div className="min-h-screen bg-background flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+    );
+}
+
+if (!communityData && !loading) return <NotFoundUI />; // Your existing notFound logic
 
     return (
         <div className="min-h-screen bg-background">

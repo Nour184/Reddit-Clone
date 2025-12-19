@@ -14,7 +14,7 @@ async function Get_Comment_Votes(request, context){
         return NextResponse.json({ message: "ERROR: ID is not an Integer!!" }, { status: 400 });
     }
     const votes = await GetCommentVotes(numericId);
-    return NextResponse.json({ VoteCount: (votes || 0) }); //retrun 0 or total votes
+    return NextResponse.json({ VoteCount: votes }); //retrun 0 or total votes
 
 }
 

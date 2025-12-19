@@ -34,24 +34,23 @@ export default function PostCard({
   const hasLink = !!linkUrl;
   const hasContent = !!content;
 
-  // --- THE FIX: State to hold the comment count ---
-  const [commentCount, setCommentCount] = useState(comments);
+ const commentCount = comments;
 
   // Check for updated count in local memory 
-  useEffect(() => {
-    // 1. If the prop `comments` changes (e.g. API refresh), update state
-    setCommentCount(comments);
+  // useEffect(() => {
+  //   // 1. If the prop `comments` changes (e.g. API refresh), update state
+  //   //setCommentCount(comments);
 
-    // 2. Check if we have a locally saved "newer" count
-    const savedCount = localStorage.getItem(`count_for_post_${id}`);
-    if (savedCount) {
-       // Only update if the saved count is different/newer
-       const parsed = parseInt(savedCount);
-       if (!isNaN(parsed) && parsed > comments) {
-           setCommentCount(parsed);
-       }
-    }
-  }, [id, comments]);
+  //   // 2. Check if we have a locally saved "newer" count
+  //   const savedCount = localStorage.getItem(`count_for_post_${id}`);
+  //   if (savedCount) {
+  //      // Only update if the saved count is different/newer
+  //      const parsed = parseInt(savedCount);
+  //      if (!isNaN(parsed) && parsed > comments) {
+  //          setCommentCount(parsed);
+  //      }
+  //   }
+  // }, [id, comments]);
 
   return (
     <Card className={cn("overflow-hidden hover:border-primary/20 transition-colors", className)}>

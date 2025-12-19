@@ -80,7 +80,24 @@ useEffect(() => {
                 const res = await fetch(`/api/posts/${postId}/comments`);
                 if (res.ok) {
                     const data = await res.json();
-                    setComments(data);
+                    
+                    // Fetch votes for each comment
+                    const commentsWithVotes = await Promise.all(
+                        data.map(async (comment) => {
+                            try {
+                                const voteRes = await fetch(`/api/posts/${postId}/comments/${comment.comment_id}/votes`);
+                                if (voteRes.ok) {
+                                    const voteData = await voteRes.json();
+                                    return { ...comment, votes: voteData.VoteCount || 0 };
+                                }
+                            } catch (error) {
+                                console.error(`Error fetching votes for comment ${comment.comment_id}:`, error);
+                            }
+                            return { ...comment, votes: 0 };
+                        })
+                    );
+                    
+                    setComments(commentsWithVotes);
                 } else {
                     console.error('Failed to fetch comments');
                 }
@@ -105,44 +122,69 @@ useEffect(() => {
         return `${Math.floor(seconds / 86400)}d ago`;
     };
 
-    const handleAddComment = async (text) => {
-        try {
-            const res = await fetch(`/api/posts/${postId}/comments`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ body: text }),
-            });
-            if (res.ok) {
-                // Refetch comments
-                const fetchRes = await fetch(`/api/posts/${postId}/comments`);
-                if (fetchRes.ok) {
-                    const data = await fetchRes.json();
-                    setComments(data);
-                    localStorage.setItem(`count_for_post_${postId}`, data.length);//Save the new count to "Frontend Memory"
-                }
-            } else {
-                console.error('Failed to add comment');
+   const handleAddComment = async (text) => {
+    try {
+        const res = await fetch(`/api/posts/${postId}/comments`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ body: text }),
+        });
+        
+        if (res.ok) {
+            const fetchRes = await fetch(`/api/posts/${postId}/comments`);
+            if (fetchRes.ok) {
+                const data = await fetchRes.json();
+                setComments(data);
+
+                // --- ADD THIS LINE ---
+                // Notify the rest of the app that this post was updated
+                window.dispatchEvent(new CustomEvent('post-updated', { detail: postId }));
             }
-        } catch (error) {
-            console.error('Error adding comment:', error);
         }
-    };
+    } catch (error) {
+        console.error('Error adding comment:', error);
+    }
+};
 
-    // 1. Function to remove a comment from state
-    const handleCommentDeleted = (deletedCommentId) => {
+const handleCommentDeleted = (deletedCommentId) => {
     setComments(prev => prev.filter(c => c.comment_id !== deletedCommentId));
-    // Update local storage count
-    const newCount = comments.length - 1;
-    localStorage.setItem(`count_for_post_${postId}`, newCount);
-   };
-
+    
+    // --- ADD THIS LINE ---
+    // Notify the rest of the app that a comment was removed
+    window.dispatchEvent(new CustomEvent('post-updated', { detail: postId }));
+};
     // 2. Function to update comment text in state
     const handleCommentEdited = (commentId, newText) => {
     setComments(prev => prev.map(c => 
         c.comment_id === commentId ? { ...c, body: newText } : c
     ));
+    };
+
+    const handleCommentVote = async (commentId, direction) => {
+        const numericFlag = direction === 'up' ? 1 : -1;
+        try {
+            const res = await fetch(`/api/posts/${postId}/comments/${commentId}/votes`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ flag: numericFlag }), // 1 for upvote, -1 for downvote
+            });
+            if (res.ok) {
+                // Refetch votes for this comment
+                const voteRes = await fetch(`/api/posts/${postId}/comments/${commentId}/votes`);
+                if (voteRes.ok) {
+                    const voteData = await voteRes.json();
+                    setComments(prev => prev.map(c => 
+                        c.comment_id === commentId 
+                            ? { ...c, votes: voteData.VoteCount || 0 }
+                            : c
+                    ));
+                }
+            } else {
+                console.error('Failed to vote on comment');
+            }
+        } catch (error) {
+            console.error('Error voting on comment:', error);
+        }
     };
 
     if (loading) {
@@ -334,7 +376,8 @@ useEffect(() => {
                                                 author={{ username: comment.user_email }} // Assuming email as username for now
                                                 content={comment.body}
                                                 createdAt={comment.created_on}
-                                                votes={0} // API doesn't return votes yet
+                                                votes={comment.votes || 0}
+                                                onVote={(type) => handleCommentVote(comment.comment_id, type)}
                                                 onDelete={handleCommentDeleted}
                                                 onEdit={handleCommentEdited}
                                             />
