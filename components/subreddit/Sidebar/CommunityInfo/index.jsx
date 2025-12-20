@@ -14,23 +14,11 @@ import { cn } from "lib/utils";
  * - href: string - Link to community page
  * - className: string - Additional CSS classes
  */
-export default function CommunityInfo({ name, members, href, className }) {
-  const formatMembers = (count) => {
-    if (!count && count !== 0) return "0";
-    if (typeof count === "string") return count;
-
-    if (count >= 1000000) {
-      return `${(count / 1000000).toFixed(1)}m`;
-    }
-    if (count >= 1000) {
-      return `${(count / 1000).toFixed(1)}k`;
-    }
-    return count.toString();
-  };
+export default function CommunityInfo({ name, href, className }) {
 
   const content = (
     <span className={cn("text-xs font-medium text-muted-foreground hover:text-foreground transition-colors", className)}>
-      r/{name} · {formatMembers(members)} members
+      r/{name} 
     </span>
   );
 
@@ -44,5 +32,3 @@ export default function CommunityInfo({ name, members, href, className }) {
 
   return content;
 }
-
-
