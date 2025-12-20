@@ -255,10 +255,10 @@ export default function CommunityPage() {
             </div>
 
             {/* Main Content Area */}
-            <div className="max-w-[1100px] mx-auto px-4 mt-6">
-                <div className="flex gap-6">
-                    {/* Posts Feed */}
-                    <div className="flex-1 w-full min-w-0">
+            <div className="max-w-[1100px] mx-auto px-4 mt-6 relative">
+                <div className="relative">
+                    {/* Posts Feed - Centered 740px */}
+                    <div className="max-w-[740px] mx-auto">
                         {/* Sort Tabs */}
                         <Card className="p-2 mb-4">
                             <div className="flex gap-1 overflow-x-auto">
@@ -289,8 +289,8 @@ export default function CommunityPage() {
                         )}
                     </div>
 
-                    {/* Right Sidebar - Community Info */}
-                    <aside className="hidden lg:block w-80 flex-shrink-0">
+                    {/* Right Sidebar - Community Info - Absolute Positioned */}
+                    <aside className="hidden xl:block absolute top-0 left-[calc(50%+390px)] w-80">
                         <Card className="p-4">
                             <div className="flex justify-between items-center mb-3">
                                 <h2 className="font-bold text-sm text-muted-foreground uppercase tracking-wider">About Community</h2>

@@ -69,7 +69,11 @@ export default function FeedCard({ postList, communityName, myPosts }: FeedCardP
 
             const response = await fetch(url, { cache: 'no-store' });
 
-            if (!response.ok) throw new Error("Failed to fetch posts");
+            if (!response.ok) {
+                const errorBody = await response.text();
+                console.error(`Failed to fetch posts: ${response.status} ${response.statusText}`, errorBody);
+                throw new Error(`Failed to fetch posts: ${response.status}`);
+            }
 
             const data = await response.json();
 

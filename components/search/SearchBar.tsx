@@ -3,16 +3,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { X, Clock } from "lucide-react";
-import { fetchSearchResults, fetchCommunities, fetchProfiles } from "lib/search";
+import { fetchCommunities, fetchProfiles } from "lib/search";
 import { cn } from "lib/utils";
 import { Avatar, AvatarFallback } from "components/ui/avatar";
 
 // Types
-interface SearchResult {
-    id: string;
-    title: string;
-    subreddit: string;
-}
+
 
 interface CommunityResult {
     name: string;
@@ -35,7 +31,7 @@ export default function SearchBar() {
     const currentCommunity = typeof params?.community === 'string' ? decodeURIComponent(params.community) : null;
 
     // Data States
-    const [results, setResults] = useState<SearchResult[]>([]);
+
     const [communities, setCommunities] = useState<CommunityResult[]>([]);
     const [profiles, setProfiles] = useState<ProfileResult[]>([]);
 
@@ -61,12 +57,10 @@ export default function SearchBar() {
             if (query.trim()) {
                 setIsLoading(true);
                 try {
-                    const [postsData, communitiesData, profilesData] = await Promise.all([
-                        fetchSearchResults(query),
+                    const [communitiesData, profilesData] = await Promise.all([
                         fetchCommunities(query),
                         fetchProfiles(query)
                     ]);
-                    setResults(postsData);
                     setCommunities(communitiesData);
                     setProfiles(profilesData);
                 } catch (error) {
@@ -75,7 +69,6 @@ export default function SearchBar() {
                     setIsLoading(false);
                 }
             } else {
-                setResults([]);
                 setCommunities([]);
                 setProfiles([]);
             }
@@ -91,10 +84,8 @@ export default function SearchBar() {
 
     const handleClear = () => {
         setQuery("");
-        setResults([]);
         setCommunities([]);
         setProfiles([]);
-        // Re-focus logic if needed
     };
 
     const handleClearCommunity = (e: React.MouseEvent) => {
@@ -268,31 +259,7 @@ export default function SearchBar() {
                             </div>
                         )}
 
-                        {/* D. Posts */}
-                        {query && results.length > 0 && (
-                            <>
-                                {(communities.length > 0 || profiles.length > 0) && <div className="h-px bg-border mx-4 my-1" />}
-                                <div className="pb-2">
-                                    <div className="px-4 py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                                        Posts
-                                    </div>
-                                    {results.map((result) => (
-                                        <div
-                                            key={result.id}
-                                            onClick={() => handleSelect(`/post/${result.id}`)}
-                                            className="px-4 py-2 hover:bg-muted cursor-pointer transition-colors group"
-                                        >
-                                            <div className="text-sm font-medium text-foreground truncate group-hover:text-primary">
-                                                {result.title}
-                                            </div>
-                                            <div className="text-xs text-muted-foreground">
-                                                {result.subreddit}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </>
-                        )}
+
 
                         {/* Loading / Empty States */}
                         {query && isLoading && (
@@ -300,7 +267,7 @@ export default function SearchBar() {
                                 Searching Reddit...
                             </div>
                         )}
-                        {query && !isLoading && results.length === 0 && communities.length === 0 && profiles.length === 0 && (
+                        {query && !isLoading && communities.length === 0 && profiles.length === 0 && (
                             <div className="px-4 py-4 text-center text-sm text-muted-foreground">
                                 No results found for "{query}"
                             </div>

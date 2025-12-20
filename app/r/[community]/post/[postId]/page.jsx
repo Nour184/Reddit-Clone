@@ -103,22 +103,22 @@ export default function PostDetailPage() { //msh hnaaa dh l single post detail
         }
     }, [postId]);
 
-   useEffect(() => {
-    const fetchComments = async () => {
-        try {
-            const res = await fetch(`/api/posts/${postId}/comments`, { 
+    useEffect(() => {
+        const fetchComments = async () => {
+            try {
+                const res = await fetch(`/api/posts/${postId}/comments`, { 
                 cache: 'no-store' 
             });
-            
-            // 1. Handle "No Comments" (404) or other errors gracefully
-            if (!res.ok) {
-                if (res.status === 404) {
-                    setComments([]); // Zero comments is a valid state, not an error
-                } else {
-                    console.error('Failed to fetch comments');
+
+                // 1. Handle "No Comments" (404) or other errors gracefully
+                if (!res.ok) {
+                    if (res.status === 404) {
+                        setComments([]); // Zero comments is a valid state, not an error
+                    } else {
+                        console.error('Failed to fetch comments');
+                    }
+                    return; // Stop execution here so we don't call res.json() again
                 }
-                return; // Stop execution here so we don't call res.json() again
-            }
 
             // 2. Only read the stream ONCE
             const data = await res.json();
@@ -148,8 +148,41 @@ export default function PostDetailPage() { //msh hnaaa dh l single post detail
         }
     };
 
-    if (postId) fetchComments();
-}, [postId]);
+        if (postId) fetchComments();
+    }, [postId]);
+
+    const [communityData, setCommunityData] = useState(null);
+
+    // Fetch Community Data for sidebar
+    useEffect(() => {
+        const loadCommunityData = async () => {
+            const name = post?.community?.name || community;
+            if (!name) return;
+
+            try {
+                const [commRes, membersRes] = await Promise.all([
+                    fetch(`/api/subreddits/${name}`),
+                    fetch(`/api/subreddits/${name}/members`)
+                ]);
+
+                if (commRes.ok) {
+                    const data = await commRes.json();
+                    const membersCount = membersRes.ok ? await membersRes.json() : 0;
+                    setCommunityData({
+                        ...data,
+                        members: membersCount,
+                        createdAt: data.created_on
+                    });
+                }
+            } catch (error) {
+                console.error("Error loading community data:", error);
+            }
+        };
+
+        if (post || community) {
+            loadCommunityData();
+        }
+    }, [post, community]);
 
     const formatTimeAgo = (dateString) => {
         const date = new Date(dateString);
@@ -200,47 +233,55 @@ export default function PostDetailPage() { //msh hnaaa dh l single post detail
       console.error("Failed to vote on post:", error);
     }
   };
-   const handleAddComment = async (text) => {
-    try {
-        const res = await fetch(`/api/posts/${postId}/comments`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ body: text }),
-        });
-        
-        if (res.ok) {
-            const fetchRes = await fetch(`/api/posts/${postId}/comments`);
-            if (fetchRes.ok) {
-                const data = await fetchRes.json();
-                setComments(data);
-
-                // --- ADD THIS LINE ---
-                // Notify the rest of the app that this post was updated
-                window.dispatchEvent(new CustomEvent('post-updated', { detail: postId }));
-            }
+    const formatMembers = (count) => {
+        if (typeof count === 'number') {
+            if (count >= 1000000) return (count / 1000000).toFixed(1) + 'm';
+            if (count >= 1000) return (count / 1000).toFixed(1) + 'k';
+            return count.toString();
         }
-    } catch (error) {
-        console.error('Error adding comment:', error);
-    }
-};
-
-const handleCommentDeleted = (deletedCommentId) => {
-    setComments(prev => prev.filter(c => c.comment_id !== deletedCommentId));
-    
-    // --- ADD THIS LINE ---
-    // Notify the rest of the app that a comment was removed
-    window.dispatchEvent(new CustomEvent('post-updated', { detail: postId }));
-};
-    // 2. Function to update comment text in state
-    const handleCommentEdited = (commentId, newText) => {
-    setComments(prev => prev.map(c => 
-        c.comment_id === commentId ? { ...c, body: newText } : c
-    ));
+        return count;
     };
 
-  const handleCommentVote = async (commentId, newVoteState) => {
-    try {
-        const url = `/api/posts/${postId}/comments/${commentId}/votes`;
+    const handleAddComment = async (text) => {
+        try {
+            const res = await fetch(`/api/posts/${postId}/comments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ body: text }),
+            });
+
+            if (res.ok) {
+                const fetchRes = await fetch(`/api/posts/${postId}/comments`);
+                if (fetchRes.ok) {
+                    const data = await fetchRes.json();
+                    setComments(data);
+
+                    // Notify the rest of the app that this post was updated
+                    window.dispatchEvent(new CustomEvent('post-updated', { detail: postId }));
+                }
+            }
+        } catch (error) {
+            console.error('Error adding comment:', error);
+        }
+    };
+
+    const handleCommentDeleted = (deletedCommentId) => {
+        setComments(prev => prev.filter(c => c.comment_id !== deletedCommentId));
+
+        // Notify the rest of the app that a comment was removed
+        window.dispatchEvent(new CustomEvent('post-updated', { detail: postId }));
+    };
+
+    // Function to update comment text in state
+    const handleCommentEdited = (commentId, newText) => {
+        setComments(prev => prev.map(c =>
+            c.comment_id === commentId ? { ...c, body: newText } : c
+        ));
+    };
+
+    const handleCommentVote = async (commentId, newVoteState) => {
+        try {
+            const url = `/api/posts/${postId}/comments/${commentId}/votes`;
 
         // Send the correct request based on the state from VoteButtons
         if (newVoteState === 'up') {
@@ -320,20 +361,23 @@ const handleCommentDeleted = (deletedCommentId) => {
 
     return (
         <div className="min-h-screen bg-background">
-            <div className="max-w-5xl mx-auto px-4 py-6">
-                {/* Back Button */}
-                <Button
-                    variant="ghost"
-                    onClick={() => router.back()}
-                    className="mb-4 gap-2"
-                >
-                    <ArrowLeft className="w-4 h-4" />
-                    Back
-                </Button>
+            {/* Main Centered Container */}
+            <div className="max-w-[1100px] mx-auto px-4 py-6 relative">
+                {/* Back Button - Constrained to 740px alignment */}
+                <div className="max-w-[740px] mx-auto mb-4">
+                    <Button
+                        variant="ghost"
+                        onClick={() => router.back()}
+                        className="gap-2 px-0 hover:bg-transparent"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        Back
+                    </Button>
+                </div>
 
-                <div className="flex gap-6">
-                    {/* Main Content */}
-                    <div className="flex-1 min-w-0">
+                <div className="relative">
+                    {/* Main Content - Centered 740px */}
+                    <div className="max-w-[740px] mx-auto">
                         <Card className="overflow-hidden">
                             {/* Post Header */}
                             <div className="p-4 border-b">
@@ -352,7 +396,7 @@ const handleCommentDeleted = (deletedCommentId) => {
 
                                 <h1 className="text-2xl font-bold mb-3">{post.title}</h1>
 
-                               {/* Post Type Badge */}
+                                {/* Post Type Badge */}
                                 {post.type && post.type !== 'post' && (
                                     <span className={cn(
                                         "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
@@ -366,7 +410,7 @@ const handleCommentDeleted = (deletedCommentId) => {
                                 )}
                             </div>
 
-                            {/* Post Content */}
+                            {/* Post Content Cluster */}
                             <div className="flex gap-4 p-4">
                                 {/* Vote Buttons */}
                                 <div className="flex-shrink-0">
@@ -402,9 +446,9 @@ const handleCommentDeleted = (deletedCommentId) => {
                                     )}
 
                                     {/* Media Content */}
-                                    {post.type === 'image' && post.picture_link && post.picture_link.length > 0 && (
+                                    {post.type === 'image' && post.media && post.media.length > 0 && (
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                            {post.picture_link.map((media, idx) => (
+                                            {post.media.map((media, idx) => (
                                                 <div key={idx} className="rounded-lg overflow-hidden border">
                                                     {media.type === 'video' ? (
                                                         <video
@@ -438,7 +482,7 @@ const handleCommentDeleted = (deletedCommentId) => {
                                     <div className="flex items-center gap-2">
                                         <Button variant="ghost" size="sm" className="gap-2">
                                             <MessageSquare className="w-4 h-4" />
-                                            {comments.length} Comments 
+                                            {comments.length} Comments
                                         </Button>
                                         <Button variant="ghost" size="sm" className="gap-2">
                                             <Share className="w-4 h-4" />
@@ -480,16 +524,42 @@ const handleCommentDeleted = (deletedCommentId) => {
                         </Card>
                     </div>
 
-                    {/* Right Sidebar */}
-                    <aside className="hidden lg:block w-80 flex-shrink-0">
-                        <Card className="p-4 sticky top-4">
-                            <h3 className="font-semibold mb-3">About Community</h3>
-                            <Link href={`/r/${communityName}`}>
-                                <Button className="w-full" variant="outline">
-                                    View r/{communityName}
-                                </Button>
-                            </Link>
-                        </Card>
+                    {/* Right Sidebar - Positioned relative to the 1100px container */}
+                    <aside className="hidden xl:block absolute top-0 left-[calc(50%+390px)] w-80">
+                        {communityData && (
+                            <Card className="p-4 sticky top-4">
+                                <div className="flex justify-between items-center mb-3">
+                                    <h2 className="font-bold text-sm text-muted-foreground uppercase tracking-wider">About Community</h2>
+                                </div>
+
+                                <p className="text-sm mb-4 leading-relaxed">
+                                    {communityData.description}
+                                </p>
+
+                                <div className="h-px bg-border my-4" />
+
+                                <div className="flex justify-between mb-2">
+                                    <div className="flex flex-col">
+                                        <span className="font-bold text-lg">{formatMembers(communityData.members)}</span>
+                                        <span className="text-xs text-muted-foreground">Members</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="font-bold text-sm">
+                                            Online
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">Guess how many</span>
+                                    </div>
+                                </div>
+
+                                <div className="h-px bg-border my-4" />
+
+                                <Link href={`/r/${communityName}`} className="w-full block">
+                                    <Button className="w-full rounded-full font-bold">
+                                        View Community
+                                    </Button>
+                                </Link>
+                            </Card>
+                        )}
                     </aside>
                 </div>
             </div>

@@ -157,7 +157,7 @@ export default function PostCard({
               <CommunityInfo
                 name={community.name}
                 members={community.members}
-                href={community.href}
+                href={`/r/${community.name}`}
                 className="text-foreground font-semibold hover:underline"
               />
             )}
@@ -170,9 +170,6 @@ export default function PostCard({
           </div>
 
           <div className="flex items-center gap-2">
-            <Button size="sm" className="rounded-full h-8 px-4 font-bold bg-blue-600 hover:bg-blue-700 text-white">
-              Join
-            </Button>
             <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 hover:bg-secondary">
               <MoreHorizontal className="w-4 h-4" />
             </Button>

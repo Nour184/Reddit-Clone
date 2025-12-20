@@ -1,20 +1,7 @@
 
 // ==========================================
 // SEARCH API UTILITIES
-// ==========================================
-
-/**
- * Search Posts
- * Endpoint: GET /api/search/posts?q={query}
- */
-export async function fetchSearchResults(query: string) {
-    // MOCK IMPLEMENTATION - Backend support for post search pending
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    if (!query) return [];
-
-    const lowerQuery = query.toLowerCase();
-    return [] // TODO: needs API integration with posts yet!
-}
+// =========================================
 
 /**
  * Search Communities
@@ -46,9 +33,19 @@ export async function fetchCommunities(query: string) {
  * Endpoint: GET /api/search/users?q={query}
  */
 export async function fetchProfiles(query: string) {
-    // MOCK IMPLEMENTATION - Backend support for user search pending
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    if (!query) return [];
+    try {
+        const res = await fetch(`/api/search/users?q=${encodeURIComponent(query)}&limit=5`);
+        if (!res.ok) throw new Error('Failed to fetch profiles');
 
-    return [] // TODO: needs API integration with profiles yet!
+        const data = await res.json();
+        // Map API response to SearchBar expected format
+        return data.map((p: any) => ({
+            username: p.name,
+            avatar: p.profile_photo_link,
+            karma: 0 // Default karma
+        }));
+    } catch (error) {
+        console.error("Search profiles error:", error);
+        return [];
+    }
 }
