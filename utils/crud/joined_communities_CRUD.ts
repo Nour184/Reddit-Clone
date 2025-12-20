@@ -20,7 +20,7 @@ export async function JoinCommunity(userEmail: string, communityName: string) {
 // =============================
 export async function GetJoinedCommunities(userEmail: string) {
   const query = `
-    SELECT * FROM joined_communities
+    SELECT community_name FROM joined_communities
     WHERE user_email = $1;
   `;
 

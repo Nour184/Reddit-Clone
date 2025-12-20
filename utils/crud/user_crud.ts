@@ -185,4 +185,35 @@ export async function IsUsernameAvailable(username: string): Promise<boolean> {
     }
 }
 
+/**
+ * Searches for users by username.
+ * 
+ * @param searchTerm - The string to search for.
+ * @param limit - Maximum number of results.
+ * @param offset - Pagination offset.
+ * @returns A promise of an array of user objects.
+ */
+export async function SearchUsers(
+    searchTerm: string | null,
+    limit: number,
+    offset: number
+): Promise<any[]> {
+    try {
+        const query = `
+            SELECT username as name, profile_picture_link as profile_photo_link
+            FROM users
+            WHERE 
+                ($1::text IS NULL OR 
+                 username ILIKE '%' || $1 || '%')
+            ORDER BY created_on DESC
+            LIMIT $2 OFFSET $3
+        `;
+        const res = await pool.query(query, [searchTerm, limit, offset]);
+        return res.rows;
+    } catch (err) {
+        console.error('Error searching users:', err);
+        throw err;
+    }
+}
+
 export default pool;

@@ -220,6 +220,40 @@ export async function DeleteVote(userEmail: string, postId: number): Promise<voi
         throw err;
     }
 }
+//to get user's voting status on the post
+export async function GetUserVote(userEmail: string, postId: number): Promise<number | null> {
+    try {
+        const query = "SELECT flag FROM post_votes WHERE user_email = $1 AND post_id = $2";
+        const values = [userEmail, postId];       
+        const result = await pool.query(query, values);
+        //return the flag (1 or -1)
+        if (result.rows.length > 0) {
+            return result.rows[0].flag;
+        }
+        return null; //if no record for that user
+    } catch (err) {
+        console.error("Error fetching user vote:", err);
+        throw err;
+    }
+}
+
+export async function GetBatchUserVotes(userEmail: string, postIds: number[]) {
+    try {
+        if (!postIds || postIds.length === 0) return [];
+
+        //select flags where email matches AND post_id is in the list
+        const query = `SELECT post_id, flag FROM post_votes WHERE user_email = $1 
+        AND post_id = ANY($2::int[])`;
+        
+        const values = [userEmail, postIds];
+        const result = await pool.query(query, values);
+
+        return result.rows; // Returns array like: [{post_id: 1, flag: 1}, {post_id: 5, flag: -1}]
+    } catch (err) {
+        console.error("Error fetching batch user votes:", err);
+        return [];
+    }
+}
 
 //for the post media public ip in cloudinary
 export async function SavePostMediaInfo(postId: number, publicId: string): Promise<void> {

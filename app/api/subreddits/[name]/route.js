@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { errorHandlerMiddleware } from "../../../../../services/middlewareHandlers/errorHandlerMiddleware.js";
-import { GetCommunity, DeleteCommunity, UpdateCommunity } from "../../../../../utils/crud/community_crud.ts";
-import { IsAdmin } from "../../../../../utils/crud/community_admin_CRUD.ts";
-import { auth } from "../../../../../services/auth.ts";
+import { errorHandlerMiddleware } from "@services/middlewareHandlers/errorHandlerMiddleware.js";
+import { GetCommunity, DeleteCommunity, UpdateCommunity } from "@utils/crud/community_crud.ts";
+import { IsAdmin } from "@utils/crud/community_admin_CRUD.ts";
+import { auth } from "@services/auth.ts";
 
 async function get_community(request, { params }) {
     const { name } = await params;

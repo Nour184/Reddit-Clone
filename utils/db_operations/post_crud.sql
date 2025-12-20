@@ -27,17 +27,21 @@ RETURNS TABLE (
     title TEXT,
     body TEXT,
     picture_link TEXT,
-    created_on TIMESTAMP
+    created_on TIMESTAMP,
+    comment_count BIGINT -- <--- NEW COLUMN
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT p.post_id,
-           p.user_email,
-           p.community_name,
-           p.title,
-           p.body,
-           p.picture_link,
-           p.created_on
+    SELECT 
+        p.post_id,
+        p.user_email,
+        p.community_name,
+        p.title,
+        p.body,
+        p.picture_link,
+        p.created_on,
+        -- Calculate the count efficiently here
+        (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.post_id) AS comment_count
     FROM posts p
     WHERE p.post_id = p_post_id;
 END;
@@ -130,7 +134,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-***************************TESTing Queries***********************/
+***************************TESTing Queries ***********************/
 SELECT * FROM posts 
 WHERE community_name = 'gamers';
 
@@ -148,7 +152,8 @@ RETURNS TABLE (
     title TEXT,
     body TEXT,
     picture_link TEXT,
-    created_on TIMESTAMP
+    created_on TIMESTAMP,
+    comment_count BIGINT -- <--- NEW COLUMN
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -159,16 +164,15 @@ BEGIN
         p.title, 
         p.body, 
         p.picture_link, 
-        p.created_on
+        p.created_on,
+        (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.post_id) AS comment_count -- <--- SUBQUERY
     FROM posts p
     WHERE 
-        -- 1) Lock search to this specific user
         p.user_email = p_user_email
         AND 
         (
             p_cursor IS NULL 
             OR 
-            -- 2) Exact same timezone fix as get_community_posts
             p.created_on < (p_cursor AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Cairo')
         )
     ORDER BY p.created_on DESC
@@ -186,7 +190,8 @@ RETURNS TABLE (
     title TEXT,
     body TEXT,
     picture_link TEXT,
-    created_on TIMESTAMP
+    created_on TIMESTAMP,
+    comment_count BIGINT 
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -197,13 +202,13 @@ BEGIN
         p.title, 
         p.body, 
         p.picture_link, 
-        p.created_on
+        p.created_on,
+        -- Subquery to count comments for each specific post in the feed
+        (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.post_id) AS comment_count
     FROM posts p
     WHERE 
         p_cursor IS NULL 
         OR 
-        -- We take the UTC input (e.g. 10:00) and convert it to 'Africa/Cairo' (e.g. 12:00)
-        -- to match the time stored in your table.
         p.created_on < (p_cursor AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Cairo')
     ORDER BY p.created_on DESC
     LIMIT p_limit;
@@ -212,7 +217,7 @@ $$ LANGUAGE plpgsql;
 
 --  3)Get Personalized Feed (For Logged In Users) 
 
-CREATE OR REPLACE FUNCTION get_personalized_feed(
+CREATE OR REPLACE FUNCTION get_personalized_feed(  
     p_user_email TEXT,
     p_limit INT,
     p_cursor TIMESTAMP
@@ -224,41 +229,33 @@ RETURNS TABLE (
     title TEXT,
     body TEXT,
     picture_link TEXT,
-    created_on TIMESTAMP
+    created_on TIMESTAMP,
+    comment_count BIGINT 
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT DISTINCT
+    SELECT 
         p.post_id, 
         p.user_email, 
         p.community_name, 
         p.title, 
         p.body, 
         p.picture_link, 
-        p.created_on
+        p.created_on,
+        -- Subquery to count comments for each specific post in the feed
+        (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.post_id) AS comment_count
     FROM posts p
-    -- Join with joined_communities to filter relevant posts
-    LEFT JOIN joined_communities jc ON p.community_name = jc.community_name 
-    AND jc.user_email = p_user_email
     WHERE 
-        (-- Condition 1: User is a member of the community
-            jc.community_name IS NOT NULL
-            OR 
-            -- Condition 2: Or user created the post themselves
-            p.user_email = p_user_email
-        )
-        AND 
-        (p_cursor IS NULL 
-            OR 
-            -- Apply the same timezone logic as public feed
-            p.created_on < (p_cursor AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Cairo')
-        )
+        p_cursor IS NULL 
+        OR 
+        p.created_on < (p_cursor AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Cairo')
     ORDER BY p.created_on DESC
     LIMIT p_limit;
 END;
 $$ LANGUAGE plpgsql;
 
 -- 4)Get posts inside a community using timestamp cursor (NOO infinite scroll)
+
 CREATE OR REPLACE FUNCTION get_community_posts(
     p_community_name TEXT, 
     p_limit INT, 
@@ -271,7 +268,8 @@ RETURNS TABLE (
     title TEXT,
     body TEXT,
     picture_link TEXT,
-    created_on TIMESTAMP
+    created_on TIMESTAMP,
+    comment_count BIGINT -- <--- NEW COLUMN
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -282,23 +280,21 @@ BEGIN
         p.title, 
         p.body, 
         p.picture_link, 
-        p.created_on
+        p.created_on,
+        (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.post_id) AS comment_count -- <--- SUBQUERY
     FROM posts p
     WHERE 
-        -- 1) Lock search to this community
         p.community_name = p_community_name
         AND 
         (
             p_cursor IS NULL 
             OR 
-            -- 2)Apply the timezone conversion math exactly like the working function
             p.created_on < (p_cursor AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Cairo')
         )
     ORDER BY p.created_on DESC
     LIMIT p_limit;
 END;
 $$ LANGUAGE plpgsql;
-
 
 --**********************************update post function***************************
 CREATE OR REPLACE FUNCTION update_post( --pass all fields even if not updating them
@@ -448,21 +444,17 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
---get comment votes
 CREATE OR REPLACE FUNCTION get_comment_votes(p_comment_id INT)
-RETURNS TABLE (
-    user_email TEXT,
-    comment_id INT,
-    flag SMALLINT
-) AS $$
+RETURNS BIGINT AS $$
+DECLARE
+    total_votes BIGINT;
 BEGIN
-    RETURN QUERY
-    SELECT 
-        v.user_email, 
-        v.comment_id, 
-        v.flag
-    FROM comment_votes v
-    WHERE v.comment_id = p_comment_id;
+    SELECT COALESCE(SUM(flag), 0) 
+    INTO total_votes
+    FROM comment_votes
+    WHERE comment_id = p_comment_id;
+
+    RETURN total_votes;
 END;
 $$ LANGUAGE plpgsql;
 

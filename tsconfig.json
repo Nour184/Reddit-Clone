@@ -16,6 +16,7 @@
     "baseUrl": ".",
 
     "paths": {
+      "@/*": ["./*"],
       "@services/*": ["services/*"],
       "@utils/*": ["utils/*"]
     },
