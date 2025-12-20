@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "components/ui/button";
 import { Textarea } from "components/ui/textarea";
@@ -99,7 +100,7 @@ function MediaUpload({ mediaFiles, setMediaFiles }) {
    Main Page
 =========================== */
 
-export default function CreatePostPage() {
+function CreatePostContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -344,4 +345,13 @@ export default function CreatePostPage() {
             </div>
         </div>
     );
+}
+
+export default function CreatePostPage() {
+    return (
+        <Suspense fallback={<div className="max-w-2xl mx-auto py-12 px-4"><p>Loading...</p></div>}>
+            <CreatePostContent />
+        </Suspense>
+    );
+}
 }

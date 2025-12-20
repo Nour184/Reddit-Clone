@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Suspense } from "react";
 import { ChevronRight, Eye } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -37,7 +38,7 @@ function SectionHeader({ title }) {
     return <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 mt-8 border-b pb-2">{title}</h3>;
 }
 
-export default function SettingsPage() {
+function SettingsContent() {
     const session = getSession();
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -260,5 +261,13 @@ export default function SettingsPage() {
 
             </Tabs>
         </div>
+    );
+}
+
+export default function SettingsPage() {
+    return (
+        <Suspense fallback={<div className="container mx-auto py-8"><p>Loading...</p></div>}>
+            <SettingsContent />
+        </Suspense>
     );
 }

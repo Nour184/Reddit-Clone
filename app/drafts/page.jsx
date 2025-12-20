@@ -1,8 +1,9 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
-export default function DraftsPage() {
+function DraftsContent() {
     const searchParams = useSearchParams();
 
     return (
@@ -13,5 +14,13 @@ export default function DraftsPage() {
                 <p className="text-sm mt-2">Drafts are saved locally on your device.</p>
             </div>
         </div>
+    );
+}
+
+export default function DraftsPage() {
+    return (
+        <Suspense fallback={<div className="container max-w-4xl mx-auto py-8"><p>Loading...</p></div>}>
+            <DraftsContent />
+        </Suspense>
     );
 }
