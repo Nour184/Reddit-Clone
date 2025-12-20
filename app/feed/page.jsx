@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect } from "react"; 
 import FeedCard from '@/components/shared/FeedCard/index';
-import PostSkeleton from "components/shared/PostSkeleton/index"; // Using the skeleton we discussed
+import PostSkeleton from "components/feed/PostSkeleton/index"; // Using the skeleton we discussed
 import { Button } from "components/ui/button";
 
 export default function FeedPage() {
