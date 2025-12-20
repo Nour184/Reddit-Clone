@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { errorHandlerMiddleware } from '@services/middlewareHandlers/errorHandlerMiddleware';
-import {  VoteComment, GetCommentVotes, DeleteCommentVote} from '@utils/crud/comment_crud';
+import {  VoteComment, GetCommentVotes, DeleteCommentVote,GetUserCommentVote} from '@utils/crud/comment_crud';
 import {votesValidator} from '@utils/validators';
 import { auth } from '@services/auth';
 
@@ -9,13 +9,32 @@ import { auth } from '@services/auth';
 async function Get_Comment_Votes(request, context){
     const {params} = await context;
     const { commentId } = await params;
+
+    const session = await auth(); //get current user
+    let currentUserStatus = null;
+
     const numericId = Number(commentId); 
     if (!commentId || !Number.isInteger(numericId)) {
         return NextResponse.json({ message: "ERROR: ID is not an Integer!!" }, { status: 400 });
     }
     const votes = await GetCommentVotes(numericId);
-    return NextResponse.json({ VoteCount: votes }); //retrun 0 or total votes
+    //if user is logged in
+    if (session?.user?.email) {
+        try {
+            const flag = await GetUserCommentVote(session.user.email, numericId);
+            
+            // Map DB value (1/-1) to Frontend string ('up'/'down')
+            if (flag === 1) currentUserStatus = 'up';
+            else if (flag === -1) currentUserStatus = 'down';
+        } catch (e) {
+            console.error("Error fetching user comment vote", e);
+        }
+    }
 
+   return NextResponse.json({ 
+        VoteCount: votes,        // return vote count on comment
+        userVote: currentUserStatus //user last vote status, needed in frontend
+    });
 }
 
 

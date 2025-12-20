@@ -5,7 +5,7 @@ import { GetCommunity } from '@utils/crud/community_crud';
 import {CreatePost ,GetCommunityPosts,
     GetPostsCreatedByUser, GetPublicFeedPosts,
     GetPersonalizedFeedForLoggedInUser , SavePostMediaInfo,
-    ClearPostMediaInfo} from '@utils/crud/post_crud';
+    ClearPostMediaInfo,GetBatchUserVotes} from '@utils/crud/post_crud';
 import cloudinary from '@services/cloudinary';
 
 import { auth } from '@services/auth';
@@ -56,6 +56,26 @@ import { auth } from '@services/auth';
         // Logged out users just see everything (Public Feed)
         posts = await GetPublicFeedPosts(fetchLimit, validCursor);
       }
+    }
+    if (isLoggedIn && posts.length > 0) {
+        try {
+            const postIds = posts.map(p => p.post_id);
+            const userVotes = await GetBatchUserVotes(userEmail, postIds);
+            const voteMap = {};   
+            userVotes.forEach(v => {
+                voteMap[v.post_id] = v.flag;
+            });
+
+            //Attach the 'user_vote' property to each post object
+            posts = posts.map(p => ({
+                ...p,
+                // If found in map, use flag (1/-1), otherwise null
+                user_vote: voteMap[p.post_id] || null 
+            }));
+
+        } catch (error) {
+            console.error("Failed to enrich feed with votes", error);
+        }
     }
   
   if (posts && posts.length > limit) {

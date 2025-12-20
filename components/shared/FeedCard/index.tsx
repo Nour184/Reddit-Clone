@@ -24,7 +24,7 @@ interface Post {
         href?: string;
     };
     votes?: number;
-    voteState?: "up" | "down" | null;
+    initialVoteState?: "up" | "down" | null;
     comments?: number;
     createdAt?: Date | string | number;
     onVote?: (direction: "up" | "down") => void;
@@ -67,7 +67,8 @@ export default function FeedCard({ postList, communityName, myPosts }: FeedCardP
             if (communityName) url.searchParams.set('communityName', communityName);
             if (myPosts) url.searchParams.set('myPosts', 'true');
 
-            const response = await fetch(url);
+            const response = await fetch(url, { cache: 'no-store' });
+
             if (!response.ok) throw new Error("Failed to fetch posts");
 
             const data = await response.json();
@@ -80,12 +81,14 @@ export default function FeedCard({ postList, communityName, myPosts }: FeedCardP
                     imageUrl: p.picture_link,
                     author: { username: p.username || p.user_email },
                     community: { name: p.community_name },
-                    votes: p.votes || 0,
+                    votes: Number(p.vote_count) || 0,
+                    initialVoteState: p.user_vote === 1 ? 'up' : p.user_vote === -1 ? 'down' : null,
                     comments: p.comment_count || 0,
                     createdAt: p.created_on,
-                    href: `/r/${p.community_name}/post/${p.post_id}`
-                }));
-
+                    href: `/r/${p.community_name}/post/${p.post_id}` 
+                }
+            ));
+                
                 setPosts((prev) => [...prev, ...mappedPosts]);
                 setNextCursor(data.meta.nextCursor);
                 setHasMore(!!data.meta.nextCursor);
@@ -123,23 +126,42 @@ export default function FeedCard({ postList, communityName, myPosts }: FeedCardP
     }, [posts.length, isLoading]);
 
     const handlePostVote = async (postId: string | number, newVoteState: "up" | "down" | null) => {
-        try {
+       let res;
+       try{
             if (newVoteState === 'up') {
-                await fetch(`/api/posts/${postId}/votes`, {
+                res = await fetch(`/api/posts/${postId}/votes`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ flag: 1 })
                 });
             } else if (newVoteState === 'down') {
-                await fetch(`/api/posts/${postId}/votes`, {
+                res = await fetch(`/api/posts/${postId}/votes`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ flag: -1 })
                 });
             } else {
-                await fetch(`/api/posts/${postId}/votes`, {
+                res = await fetch(`/api/posts/${postId}/votes`, {
                     method: 'DELETE'
                 });
+            }
+            if (res.ok) {
+                // Fetch fresh vote count to keep numbers accurate
+                const voteRes = await fetch(`/api/posts/${postId}/votes`, { cache: 'no-store' });
+                if (voteRes.ok) {
+                    const voteData = await voteRes.json();
+                    
+                    setPosts(currentPosts => currentPosts.map(p => {
+                        if (p.id === postId) {
+                            return {
+                                ...p,
+                                votes: voteData.totalVotes,
+                                initialVoteState: voteData.userVote // Update the "memory"
+                            };
+                        }
+                        return p;
+                    }));
+                }
             }
         } catch (err) {
             console.error("Failed to vote:", err);

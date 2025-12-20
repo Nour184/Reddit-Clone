@@ -17,7 +17,7 @@ export default function FeedPage() {
             const url = new URL('/api/posts', window.location.origin);
             if (cursor) url.searchParams.set('cursor', cursor);
 
-            const res = await fetch(url);
+            const res = await fetch(url,{ cache: 'no-store' });
             if (res.ok) {
                 const data = await res.json();
 
@@ -32,6 +32,8 @@ export default function FeedPage() {
                         href: `/r/${p.community_name}` 
                     },
                     imageUrl: p.picture_link,
+                    initialVoteState: p.user_vote === 1 ? 'up' : p.user_vote === -1 ? 'down' : null,
+                    votes: Number(p.vote_count) || 0, //total vote count
                     // Use the real comment count from the database!
                     comments: parseInt(p.comment_count || 0),
                     createdAt: p.created_on,

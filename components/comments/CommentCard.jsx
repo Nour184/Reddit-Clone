@@ -46,7 +46,7 @@ export default function CommentCard({
     author,
     content,
     votes = 0,
-    voteState = null,
+    initialVoteState = null,
     createdAt,
     replies = [],
     depth = 0,
@@ -138,7 +138,7 @@ export default function CommentCard({
                 <div className="flex-shrink-0">
                     <VoteButtons
                         initialVotes={votes}
-                        initialVoteState={voteState}
+                        initialVoteState={initialVoteState}
                         onVote={onVote}
                         compact={true}
                     />

@@ -134,7 +134,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-***************************TESTing Queries***********************/
+***************************TESTing Queries ***********************/
 SELECT * FROM posts 
 WHERE community_name = 'gamers';
 
@@ -217,7 +217,7 @@ $$ LANGUAGE plpgsql;
 
 --  3)Get Personalized Feed (For Logged In Users) 
 
-CREATE OR REPLACE FUNCTION get_personalized_feed(
+CREATE OR REPLACE FUNCTION get_personalized_feed(  
     p_user_email TEXT,
     p_limit INT,
     p_cursor TIMESTAMP
@@ -230,11 +230,11 @@ RETURNS TABLE (
     body TEXT,
     picture_link TEXT,
     created_on TIMESTAMP,
-    comment_count BIGINT -- <--- NEW COLUMN
+    comment_count BIGINT 
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT DISTINCT
+    SELECT 
         p.post_id, 
         p.user_email, 
         p.community_name, 
@@ -242,17 +242,13 @@ BEGIN
         p.body, 
         p.picture_link, 
         p.created_on,
-        (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.post_id) AS comment_count -- <--- SUBQUERY
+        -- Subquery to count comments for each specific post in the feed
+        (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.post_id) AS comment_count
     FROM posts p
-    LEFT JOIN joined_communities jc ON p.community_name = jc.community_name 
-    AND jc.user_email = p_user_email
     WHERE 
-        (jc.community_name IS NOT NULL OR p.user_email = p_user_email)
-        AND 
-        (p_cursor IS NULL 
-            OR 
-            p.created_on < (p_cursor AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Cairo')
-        )
+        p_cursor IS NULL 
+        OR 
+        p.created_on < (p_cursor AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Cairo')
     ORDER BY p.created_on DESC
     LIMIT p_limit;
 END;

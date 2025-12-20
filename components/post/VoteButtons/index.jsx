@@ -1,23 +1,9 @@
 "use client";
 
-// components/shared/VoteButtons/index.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react"; // 1. Import useEffect
 import { ArrowBigUp, ArrowBigDown } from "lucide-react";
 import { cn } from "../../../lib/utils";
 
-/**
- * VoteButtons Component
- * 
- * Reddit-style voting buttons with press animation and disabled state.
- * Handles upvote, downvote, and neutral states with smooth transitions.
- * 
- * Props:
- * - initialVotes: number - Starting vote count
- * - initialVoteState: "up" | "down" | null - Initial vote state
- * - onVote: (vote: "up" | "down" | null) => void - Callback when vote changes
- * - disabled: boolean - Whether voting is disabled
- * - compact: boolean - Smaller size for compact layouts
- */
 export default function VoteButtons({
   initialVotes = 0,
   initialVoteState = null,
@@ -30,12 +16,25 @@ export default function VoteButtons({
   const [voteState, setVoteState] = useState(initialVoteState);
   const [isAnimating, setIsAnimating] = useState(false);
 
+  // ---------------------------------------------------------
+  // 2. ADD THIS: Synchronize state when Parent updates Props
+  // ---------------------------------------------------------
+  useEffect(() => {
+    setVotes(initialVotes);
+  }, [initialVotes]);
+
+  useEffect(() => {
+    setVoteState(initialVoteState);
+  }, [initialVoteState]);
+  // ---------------------------------------------------------
+
   const handleVote = (newVote) => {
     if (disabled) return;
 
     setIsAnimating(true);
     setTimeout(() => setIsAnimating(false), 200);
 
+    // Optimistic Update (Immediate UI feedback)
     let newVoteState = voteState;
     let voteChange = 0;
 

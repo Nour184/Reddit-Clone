@@ -145,6 +145,21 @@ export async function GetCommentVotes(commentId: number) {
     }
 }
 
+export async function GetUserCommentVote(userEmail: string, commentId: number) {
+    try {
+        const query = "SELECT flag FROM comment_votes WHERE user_email = $1 AND comment_id = $2";
+        const values = [userEmail, commentId];
+        const result = await pool.query(query, values);
+        if (result.rows.length > 0) {
+            return result.rows[0].flag; // Returns 1 or -1
+        }
+        return null; //if no vote found
+    } catch (err) {
+        console.error("Error fetching user comment vote:", err);
+        throw err;
+    }
+}
+
 export async function DeleteCommentVote(user_email: string, comment_id: number): Promise<void> {
     try {
         await pool.query(

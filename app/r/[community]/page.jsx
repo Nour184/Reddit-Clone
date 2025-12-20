@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { useSession } from "next-auth/react"; // Re-added
+import { useSession } from "next-auth/react"; 
 import SubredditHeader from "../../../components/subreddit/SubredditHeader";
 import FeedCard from "../../../components/shared/FeedCard/index";
 import { Card } from "../../../components/ui/card";
