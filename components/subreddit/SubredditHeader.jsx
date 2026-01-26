@@ -92,7 +92,11 @@ export default function SubredditHeader({ communityId, owner }) {
     };
 
     const handleCreatePost = () => {
-        router.push(`/submit?community=${communityId}`);
+        if (session?.user == null) {
+            router.push(`/auth/register`);
+        } else {
+            router.push(`/submit?community=${communityId}`);
+        }
     };
 
     if (isLoading) return null; // Or a skeleton
