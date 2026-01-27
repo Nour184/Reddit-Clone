@@ -18,7 +18,7 @@ import {
 } from "components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "components/ui/avatar";
 import { MessageSquare, Bell, Plus, LogIn, User, FileText, Settings, LogOut, Moon, Sun, Image as ImageIcon } from "lucide-react";
-import { cn } from "lib/utils";
+import { cn } from "@/utils/utils";
 
 /**
  * UserMenu Component

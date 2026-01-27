@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { Button } from "components/ui/button";
 import { Home, TrendingUp, Plus, ChevronUp, ChevronDown, Shield } from "lucide-react";
-import { cn } from "lib/utils";
+import { cn } from "@/utils/utils";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 

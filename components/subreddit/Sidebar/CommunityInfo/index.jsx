@@ -1,6 +1,6 @@
 // components/shared/CommunityInfo/index.jsx
 import Link from "next/link";
-import { cn } from "lib/utils";
+import { cn } from "@/utils/utils";
 
 /**
  * CommunityInfo Component
@@ -18,7 +18,7 @@ export default function CommunityInfo({ name, href, className }) {
 
   const content = (
     <span className={cn("text-xs font-medium text-muted-foreground hover:text-foreground transition-colors", className)}>
-      r/{name} 
+      r/{name}
     </span>
   );
 

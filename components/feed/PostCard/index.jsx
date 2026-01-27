@@ -18,27 +18,27 @@ import TimeAgo from "../../shared/TimeAgo";
 import CommunityInfo from "../../subreddit/Sidebar/CommunityInfo";
 import { Button } from "../../ui/button";
 import { Card } from "../../ui/card";
-import { cn } from "../../../lib/utils";
+import { cn } from "../../../utils/utils";
 
-async function getInitVotes(id){
-  try{
-    const response = await  fetch(`/api/posts/${id}/votes`);
+async function getInitVotes(id) {
+  try {
+    const response = await fetch(`/api/posts/${id}/votes`);
     return response.json().totalVotes;
 
-  }catch(error){
+  } catch (error) {
     error.log("couldnt init votes");
   }
 }
 export default function PostCard({
-  id,  
+  id,
   title,
   content,
   imageUrl,
   linkUrl,
-  linkPreview,   
+  linkPreview,
   author,
   community,
-  votes : initialVotesFromParent = 0,  //#########
+  votes: initialVotesFromParent = 0,  //#########
   initialVoteState = null,
   comments = 0,
   createdAt,
@@ -60,7 +60,7 @@ export default function PostCard({
         if (res.ok) {
           const data = await res.json();
           if (mounted && data.totalVotes !== undefined) {
-             setCurrentVoteCount(data.totalVotes);
+            setCurrentVoteCount(data.totalVotes);
           }
         }
       } catch (error) {
@@ -204,7 +204,7 @@ export default function PostCard({
           {/* Votes */}
           <VoteButtons
             initialVotes={currentVoteCount}
-            initialVoteState={initialVoteState} 
+            initialVoteState={initialVoteState}
             onVote={handleInternalVote}
             horizontal={true}
           />

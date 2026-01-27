@@ -12,7 +12,7 @@ import {
     DropdownMenuTrigger,
 } from "components/ui/dropdown-menu";
 import { MoreHorizontal, Edit, Trash2, Loader2, X } from "lucide-react";
-import { getSession } from "lib/session";
+import { getSession } from "@/utils/session";
 
 export default function PostActions({ post }) {
     const router = useRouter();

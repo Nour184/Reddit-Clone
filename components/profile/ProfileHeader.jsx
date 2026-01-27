@@ -7,7 +7,7 @@ import UserAvatar from "components/user/UserAvatar/index.jsx";
 import { Button } from "components/ui/button";
 import { Card } from "components/ui/card";
 import Badge from "components/shared/Badge/index.jsx";
-import { cn } from "lib/utils";
+import { cn } from "@/utils/utils";
 
 /**
  * ProfileHeader Component

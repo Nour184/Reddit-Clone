@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "components/ui/button";
 import { Card } from "components/ui/card";
 import { Sparkles, Loader2, X } from "lucide-react";
-import { cn } from "lib/utils";
+import { cn } from "@/utils/utils";
 
 export default function AISummarizeButton({ postId, title, content, className }) {
     const [summary, setSummary] = useState(null);

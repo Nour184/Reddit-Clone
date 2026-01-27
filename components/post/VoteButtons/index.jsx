@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"; // 1. Import useEffect
 import { ArrowBigUp, ArrowBigDown } from "lucide-react";
-import { cn } from "../../../lib/utils";
+import { cn } from "../../../utils/utils";
 
 export default function VoteButtons({
   initialVotes = 0,

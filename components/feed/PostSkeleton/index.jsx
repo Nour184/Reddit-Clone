@@ -1,5 +1,5 @@
 // components/shared/PostSkeleton/index.jsx
-import { cn } from "lib/utils";
+import { cn } from "@/utils/utils";
 
 /**
  * PostSkeleton Component

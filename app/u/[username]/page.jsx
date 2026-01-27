@@ -7,7 +7,7 @@ import { Settings, Share2, Plus, MoreHorizontal, Cake, MessageSquare, Award, Fla
 import { Button } from "components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "components/ui/avatar";
-import { getSession, removeSession } from "lib/session";
+import { getSession, removeSession } from "@/utils/session";
 import FeedCard from "components/shared/FeedCard/index";
 
 export default function UserProfilePage() {

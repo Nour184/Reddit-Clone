@@ -19,7 +19,7 @@ import {
     Video
 } from "lucide-react";
 import Link from "next/link";
-import { cn } from "lib/utils";
+import { cn } from "@/utils/utils";
 import CommentForm from "components/comments/CommentForm";
 import CommentCard from "components/comments/CommentCard";
 
@@ -37,9 +37,9 @@ export default function PostDetailPage() { //msh hnaaa dh l single post detail
         // Fetch post from database API
         const loadPost = async () => {
             try {
-                const response = await fetch(`/api/posts/${postId}`, { 
-                cache: 'no-store' 
-            });
+                const response = await fetch(`/api/posts/${postId}`, {
+                    cache: 'no-store'
+                });
 
                 if (!response.ok) {
                     if (response.status === 404) {
@@ -56,14 +56,14 @@ export default function PostDetailPage() { //msh hnaaa dh l single post detail
                 let currentVotes = 0;
                 let currentUserStatus = null;
                 try {
-                    const voteResponse = await fetch(`/api/posts/${postId}/votes`, { 
-                        cache: 'no-store' 
+                    const voteResponse = await fetch(`/api/posts/${postId}/votes`, {
+                        cache: 'no-store'
                     });
-                    
+
                     if (voteResponse.ok) {
                         const voteData = await voteResponse.json();
                         // "totalVotes" matches the JSON success example you provided
-                        currentVotes = voteData.totalVotes; 
+                        currentVotes = voteData.totalVotes;
                         currentUserStatus = voteData.userVote || null;
                     }
                 } catch (err) {
@@ -106,9 +106,9 @@ export default function PostDetailPage() { //msh hnaaa dh l single post detail
     useEffect(() => {
         const fetchComments = async () => {
             try {
-                const res = await fetch(`/api/posts/${postId}/comments`, { 
-                cache: 'no-store' 
-            });
+                const res = await fetch(`/api/posts/${postId}/comments`, {
+                    cache: 'no-store'
+                });
 
                 // 1. Handle "No Comments" (404) or other errors gracefully
                 if (!res.ok) {
@@ -120,33 +120,33 @@ export default function PostDetailPage() { //msh hnaaa dh l single post detail
                     return; // Stop execution here so we don't call res.json() again
                 }
 
-            // 2. Only read the stream ONCE
-            const data = await res.json();
-            
-            const commentsWithVotes = await Promise.all(
-                data.map(async (comment) => {
-                    try {
-                        const voteRes = await fetch(`/api/posts/${postId}/comments/${comment.comment_id}/votes`);
-                        if (voteRes.ok) {
-                            const voteData = await voteRes.json();
-                            
-                            // Accessing 'VoteCount' directly as it is now returned from your SQL BIGINT sum
-                            const count = Number(voteData.VoteCount) || 0;
-                            const status = voteData.userVote || null; //get user status on that vote
-                            return { ...comment, votes: count, userVoteStatus: status };
+                // 2. Only read the stream ONCE
+                const data = await res.json();
+
+                const commentsWithVotes = await Promise.all(
+                    data.map(async (comment) => {
+                        try {
+                            const voteRes = await fetch(`/api/posts/${postId}/comments/${comment.comment_id}/votes`);
+                            if (voteRes.ok) {
+                                const voteData = await voteRes.json();
+
+                                // Accessing 'VoteCount' directly as it is now returned from your SQL BIGINT sum
+                                const count = Number(voteData.VoteCount) || 0;
+                                const status = voteData.userVote || null; //get user status on that vote
+                                return { ...comment, votes: count, userVoteStatus: status };
+                            }
+                        } catch (error) {
+                            console.error(`Error fetching votes for comment ${comment.comment_id}:`, error);
                         }
-                    } catch (error) {
-                        console.error(`Error fetching votes for comment ${comment.comment_id}:`, error);
-                    }
-                    return { ...comment, votes: 0 };
-                })
-            );
-            
-            setComments(commentsWithVotes);
-        } catch (error) {
-            console.error('Error fetching comments:', error);
-        }
-    };
+                        return { ...comment, votes: 0 };
+                    })
+                );
+
+                setComments(commentsWithVotes);
+            } catch (error) {
+                console.error('Error fetching comments:', error);
+            }
+        };
 
         if (postId) fetchComments();
     }, [postId]);
@@ -196,43 +196,43 @@ export default function PostDetailPage() { //msh hnaaa dh l single post detail
     };
 
     const handlePostVote = async (newVoteState) => {
-    try {
-      const url = `/api/posts/${postId}/votes`;
+        try {
+            const url = `/api/posts/${postId}/votes`;
 
-      // 1. Send the correct request based on the new state
-      if (newVoteState === 'up') {
-        await fetch(url, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ flag: 1 })
-        });
-      } else if (newVoteState === 'down') {
-        await fetch(url, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ flag: -1 })
-        });
-      } else {
-        // null means the user is un-voting (removing their vote)
-        await fetch(url, { method: 'DELETE' });
-      }
+            // 1. Send the correct request based on the new state
+            if (newVoteState === 'up') {
+                await fetch(url, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ flag: 1 })
+                });
+            } else if (newVoteState === 'down') {
+                await fetch(url, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ flag: -1 })
+                });
+            } else {
+                // null means the user is un-voting (removing their vote)
+                await fetch(url, { method: 'DELETE' });
+            }
 
-      // 2. Fetch the fresh count to ensure accuracy
-      const voteRes = await fetch(url, { cache: 'no-store' });
-      if (voteRes.ok) {
-        const voteData = await voteRes.json();
-        
-        // 3. Update the parent state so the count persists
-        setPost((prev) => ({
-          ...prev,
-          upvotes: voteData.totalVotes,
-          userVoteStatus: voteData.userVote,
-        }));
-      }
-    } catch (error) {
-      console.error("Failed to vote on post:", error);
-    }
-  };
+            // 2. Fetch the fresh count to ensure accuracy
+            const voteRes = await fetch(url, { cache: 'no-store' });
+            if (voteRes.ok) {
+                const voteData = await voteRes.json();
+
+                // 3. Update the parent state so the count persists
+                setPost((prev) => ({
+                    ...prev,
+                    upvotes: voteData.totalVotes,
+                    userVoteStatus: voteData.userVote,
+                }));
+            }
+        } catch (error) {
+            console.error("Failed to vote on post:", error);
+        }
+    };
     const formatMembers = (count) => {
         if (typeof count === 'number') {
             if (count >= 1000000) return (count / 1000000).toFixed(1) + 'm';
@@ -283,41 +283,41 @@ export default function PostDetailPage() { //msh hnaaa dh l single post detail
         try {
             const url = `/api/posts/${postId}/comments/${commentId}/votes`;
 
-        // Send the correct request based on the state from VoteButtons
-        if (newVoteState === 'up') {
-            await fetch(url, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ flag: 1 })
-            });
-        } else if (newVoteState === 'down') {
-            await fetch(url, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ flag: -1 })
-            });
-        } else {
-            // This handles the null state when a user un-clicks a button
-            await fetch(url, { method: 'DELETE' });
-        }
+            // Send the correct request based on the state from VoteButtons
+            if (newVoteState === 'up') {
+                await fetch(url, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ flag: 1 })
+                });
+            } else if (newVoteState === 'down') {
+                await fetch(url, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ flag: -1 })
+                });
+            } else {
+                // This handles the null state when a user un-clicks a button
+                await fetch(url, { method: 'DELETE' });
+            }
 
-        //Refresh only this comment's vote count from the server
-        const voteRes = await fetch(url);
-        if (voteRes.ok) {
-            const voteData = await voteRes.json();
-            
-            // Use Number() to ensure we don't pass an object to React
-            const updatedCount = Number(voteData.VoteCount) || 0;
-            const updatedStatus = voteData.userVote || null;
+            //Refresh only this comment's vote count from the server
+            const voteRes = await fetch(url);
+            if (voteRes.ok) {
+                const voteData = await voteRes.json();
 
-            setComments(prev => prev.map(c => 
-                c.comment_id === commentId ? { ...c, votes: updatedCount, userVoteStatus: updatedStatus } : c
-            ));
+                // Use Number() to ensure we don't pass an object to React
+                const updatedCount = Number(voteData.VoteCount) || 0;
+                const updatedStatus = voteData.userVote || null;
+
+                setComments(prev => prev.map(c =>
+                    c.comment_id === commentId ? { ...c, votes: updatedCount, userVoteStatus: updatedStatus } : c
+                ));
+            }
+        } catch (err) {
+            console.error("Failed to vote on comment:", err);
         }
-    } catch (err) {
-        console.error("Failed to vote on comment:", err);
-    }
-};
+    };
 
     if (loading) {
         return (

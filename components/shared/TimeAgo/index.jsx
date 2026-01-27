@@ -1,5 +1,5 @@
 // components/shared/TimeAgo/index.jsx
-import { cn } from "lib/utils";
+import { cn } from "@/utils/utils";
 
 /**
  * TimeAgo Component

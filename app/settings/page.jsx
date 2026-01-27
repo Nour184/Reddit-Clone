@@ -7,8 +7,8 @@ import { Button } from "../../components/ui/button";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../components/ui/tabs";
 import { Switch } from "../../components/ui/switch";
-import { getSession } from "../../lib/session";
-import { cn } from "../../lib/utils";
+import { getSession } from "../../utils/session";
+import { cn } from "../../utils/utils";
 
 /**
  * Reusable Row Component for consistency

@@ -9,10 +9,10 @@ import UserAvatar from "components/user/UserAvatar/index.jsx";
 import TimeAgo from "components/shared/TimeAgo/index.jsx";
 import ShareDropdown from "components/post/ShareDropdown/index.jsx";
 import { Button } from "components/ui/button";
-import { cn } from "../../lib/utils";
+import { cn } from "../../utils/utils";
 import CommentForm from "./CommentForm";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "components/ui/dropdown-menu";
-import { useSession } from "next-auth/react"; 
+import { useSession } from "next-auth/react";
 
 
 /**
@@ -61,7 +61,7 @@ export default function CommentCard({
     const [isReplying, setIsReplying] = useState(false);
     const [isEditing, setIsEditing] = useState(false); //comment is being edited
     const [isDeleting, setIsDeleting] = useState(false); //comment is being deleted
-    const { data: session } = useSession(); 
+    const { data: session } = useSession();
 
     const currentUserEmail = session?.user?.email; //get the real current user email
 
@@ -91,7 +91,7 @@ export default function CommentCard({
                 const updatedComment = await res.json();
                 setIsEditing(false);
                 // Update the UI via parent function
-                if (onEdit) onEdit(id, newText); 
+                if (onEdit) onEdit(id, newText);
             } else {
                 console.error("Failed to edit comment");
             }
@@ -102,7 +102,7 @@ export default function CommentCard({
 
     const handleDelete = async () => {
         if (!confirm("Are you sure you want to delete this comment?")) return;
-        
+
         try {
             setIsDeleting(true);
             const res = await fetch(`/api/posts/59/comments/${id}`, {
@@ -127,11 +127,11 @@ export default function CommentCard({
 
     if (isDeleting) return null; //hide comment when deletedd immediatly
     console.log("Debug Owner Check:", {
-    commentAuthor: author?.username,
-    myEmail: currentUserEmail,
-    isOwner: isOwner
-});
-  return (
+        commentAuthor: author?.username,
+        myEmail: currentUserEmail,
+        isOwner: isOwner
+    });
+    return (
         <div className={cn("group", className)}>
             <div className={cn("flex gap-3 py-2", indentClass)}>
                 {/* Vote Buttons */}
@@ -235,10 +235,10 @@ export default function CommentCard({
 
                     {/* Reply Form (Keep existing logic) */}
                     {isReplying && isExpanded && (
-                         <div className="mt-2">
+                        <div className="mt-2">
                             <CommentForm
                                 onSubmit={(text) => {
-                                    if(onReply) {
+                                    if (onReply) {
                                         onReply(id, text);
                                         setIsReplying(false);
                                     }

@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { X, Clock } from "lucide-react";
-import { fetchCommunities, fetchProfiles } from "lib/search";
-import { cn } from "lib/utils";
+import { fetchCommunities, fetchProfiles } from "@/utils/search";
+import { cn } from "@/utils/utils";
 import { Avatar, AvatarFallback } from "components/ui/avatar";
 
 // Types

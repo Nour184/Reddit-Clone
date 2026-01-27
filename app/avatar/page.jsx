@@ -5,7 +5,7 @@ import { Check } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../components/ui/tabs";
 
-import { getSession, setSession } from "../../lib/session";
+import { getSession, setSession } from "../../utils/session";
 import { useRouter } from "next/navigation";
 
 // Simplified Toast for this context if not fully set up

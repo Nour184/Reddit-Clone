@@ -7,7 +7,7 @@ import { ArrowLeft, X } from "lucide-react";
 import FloatingLabelInput from "components/shared/FloatingLabelInput";
 import { Button } from "components/ui/button";
 import { signIn } from "next-auth/react";
-import { setSession } from "lib/session";
+import { setSession } from "@/utils/session";
 
 export default function LoginPage() {
     const router = useRouter();
