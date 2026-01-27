@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Button from "../shared/Button";
-import { isJoined, joinCommunity, leaveCommunity } from "lib/community-store";
+
 import {
     DropdownMenu,
     DropdownMenuTrigger,

@@ -152,7 +152,7 @@ export default function Sidebar() {
             {/* Create Actions */}
             {status === "authenticated" && (
               <div className="px-1 pb-2 space-y-1">
-                <Link href="/create-community">
+                <Link href="/r/create">
                   <Button variant="ghost" className="w-full justify-start gap-2 hover:bg-accent px-2 text-foreground h-9 font-normal">
                     <Plus className="w-5 h-5" />
                     <span className="text-sm">Create Community</span>

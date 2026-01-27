@@ -8,7 +8,7 @@ export const authConfig = {
         authorized({ auth, request: { nextUrl } }) {
 
             // TODO: need to revise this.
-            const protectedPaths = ["/create-community", "/submit", "/settings", "/profile"];
+            const protectedPaths = ["/r/create", "/submit", "/settings", "/profile"];
 
             const isProtected = protectedPaths.some(path => nextUrl.pathname.startsWith(path));
 
