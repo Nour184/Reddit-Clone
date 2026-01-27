@@ -1,4 +1,5 @@
 import FeedCard from '../components/shared/FeedCard/index';
+import PostModalPage from './@postModal/default';
 
 export default function Home() {
   const postList = [];
