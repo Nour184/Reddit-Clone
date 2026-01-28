@@ -1,19 +1,18 @@
 import { NextResponse } from "next/server";
 import { errorHandlerMiddleware } from '@services/middlewareHandlers/errorHandlerMiddleware';
-import {  VoteComment, GetCommentVotes, DeleteCommentVote,GetUserCommentVote} from '@utils/crud/comment_crud';
-import {votesValidator} from '@utils/validators';
+import { VoteComment, GetCommentVotes, DeleteCommentVote, GetUserCommentVote } from '@utils/crud/comment_crud';
+import { votesValidator } from '@utils/validators';
 import { auth } from '@services/auth';
 
 
 
-async function Get_Comment_Votes(request, context){
-    const {params} = await context;
+async function Get_Comment_Votes(request, { params }) {
     const { commentId } = await params;
 
     const session = await auth(); //get current user
     let currentUserStatus = null;
 
-    const numericId = Number(commentId); 
+    const numericId = Number(commentId);
     if (!commentId || !Number.isInteger(numericId)) {
         return NextResponse.json({ message: "ERROR: ID is not an Integer!!" }, { status: 400 });
     }
@@ -22,7 +21,7 @@ async function Get_Comment_Votes(request, context){
     if (session?.user?.email) {
         try {
             const flag = await GetUserCommentVote(session.user.email, numericId);
-            
+
             // Map DB value (1/-1) to Frontend string ('up'/'down')
             if (flag === 1) currentUserStatus = 'up';
             else if (flag === -1) currentUserStatus = 'down';
@@ -31,22 +30,21 @@ async function Get_Comment_Votes(request, context){
         }
     }
 
-   return NextResponse.json({ 
+    return NextResponse.json({
         VoteCount: votes,        // return vote count on comment
         userVote: currentUserStatus //user last vote status, needed in frontend
     });
 }
 
 
-async function Patch_Vote_Handler(request, context) {
+async function Patch_Vote_Handler(request, { params }) {
     //authorize user 
     const session = await auth();
     if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const email = session.user.email;
 
-    const { params } = await context;
     const { commentId } = await params;
     const numericId = Number(commentId);
     //valiadate id 
@@ -55,7 +53,7 @@ async function Patch_Vote_Handler(request, context) {
     }
 
     const data = await request.json(); //get data from frontend
-    
+
     //validate input
     const partialValidator = votesValidator.pick({ flag: true });
     const validationResult = partialValidator.safeParse(data);
@@ -72,15 +70,14 @@ async function Patch_Vote_Handler(request, context) {
 }
 
 //for unvoting
-async function Delete_Vote_Handler(request, context) {
+async function Delete_Vote_Handler(request, { params }) {
     //authorize user 
     const session = await auth();
     if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const email = session.user.email;
 
-    const { params } = await context;
     const { commentId } = await params;
     const numericId = Number(commentId);
     //validate id!!
