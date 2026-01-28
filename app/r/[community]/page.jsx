@@ -140,6 +140,8 @@ export default function CommunityPage() {
 
 
     // Load Posts
+    const [nextCursor, setNextCursor] = useState(null);
+
     useEffect(() => {
         const fetchPosts = async () => {
             try {
@@ -169,6 +171,7 @@ export default function CommunityPage() {
                     }));
 
                     setPosts(mappedPosts);
+                    setNextCursor(data.meta.nextCursor);
                 } else {
                     console.error("Failed to load posts");
                 }
@@ -281,7 +284,7 @@ export default function CommunityPage() {
                         </Card>
 
                         {/* Posts */}
-                        <FeedCard postList={posts} communityName={communityName} />
+                        <FeedCard postList={posts} initialNextCursor={nextCursor} communityName={communityName} />
                         {posts.length === 0 && (
                             <div className="text-center py-10 opacity-50">
                                 <p>No posts yet. Be the first to post!</p>

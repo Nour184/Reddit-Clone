@@ -34,31 +34,42 @@ interface Post {
 
 interface FeedCardProps {
     postList: Post[];
+    initialNextCursor?: string | null;
     communityName?: string;
     myPosts?: boolean;
 }
 
-export default function FeedCard({ postList, communityName, myPosts }: FeedCardProps) {
+export default function FeedCard({ postList, initialNextCursor = null, communityName, myPosts }: FeedCardProps) {
     const [posts, setPosts] = useState(postList);
     const [isLoading, setIsLoading] = useState(false);
-    const [nextCursor, setNextCursor] = useState<string | null>(null);
+    const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor);
     const [hasMore, setHasMore] = useState(true);
     const loaderRef = useRef<HTMLDivElement>(null);
 
     // Sync state with props (e.g. when parent loads data)
     useEffect(() => {
         setPosts(postList);
+        setNextCursor(initialNextCursor);
         // If the parent passed an empty list, trigger initial load
         if (postList.length === 0) {
             setHasMore(true);
         } else {
-            // We don't know the cursor from props yet, so we assume more exists
-            setHasMore(true);
+            // If we have an initial cursor, we know there might be more
+            // If we don't, we assume there's no more for now (to avoid dupes)
+            setHasMore(!!initialNextCursor);
         }
-    }, [postList]);
+    }, [postList, initialNextCursor]);
 
     const loadMore = async () => {
         if (isLoading || !hasMore) return;
+
+        // If we already have posts but no cursor for the next page, 
+        // we can't load more without re-fetching the first page and causing duplicates.
+        if (posts.length > 0 && !nextCursor) {
+            setHasMore(false);
+            return;
+        }
+
         setIsLoading(true);
 
         try {
@@ -89,11 +100,16 @@ export default function FeedCard({ postList, communityName, myPosts }: FeedCardP
                     initialVoteState: p.user_vote === 1 ? 'up' : p.user_vote === -1 ? 'down' : null,
                     comments: p.comment_count || 0,
                     createdAt: p.created_on,
-                    href: `/r/${p.community_name}/post/${p.post_id}` 
-                }
-            ));
-                
-                setPosts((prev) => [...prev, ...mappedPosts]);
+                    href: `/r/${p.community_name}/post/${p.post_id}`
+                }));
+
+                setPosts((prev) => {
+                    // Filter out any posts that already exist in the feed to avoid duplicate key errors
+                    const existingIds = new Set(prev.map(p => p.id));
+                    const uniqueNewPosts = mappedPosts.filter(p => !existingIds.has(p.id));
+                    return [...prev, ...uniqueNewPosts];
+                });
+
                 setNextCursor(data.meta.nextCursor);
                 setHasMore(!!data.meta.nextCursor);
             } else {
@@ -130,8 +146,8 @@ export default function FeedCard({ postList, communityName, myPosts }: FeedCardP
     }, [posts.length, isLoading]);
 
     const handlePostVote = async (postId: string | number, newVoteState: "up" | "down" | null) => {
-       let res;
-       try{
+        let res;
+        try {
             if (newVoteState === 'up') {
                 res = await fetch(`/api/posts/${postId}/votes`, {
                     method: 'PATCH',
@@ -154,7 +170,7 @@ export default function FeedCard({ postList, communityName, myPosts }: FeedCardP
                 const voteRes = await fetch(`/api/posts/${postId}/votes`, { cache: 'no-store' });
                 if (voteRes.ok) {
                     const voteData = await voteRes.json();
-                    
+
                     setPosts(currentPosts => currentPosts.map(p => {
                         if (p.id === postId) {
                             return {

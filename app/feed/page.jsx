@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react"; 
+import { useState, useEffect } from "react";
 import FeedCard from '@/components/shared/FeedCard/index';
 import PostSkeleton from "components/feed/PostSkeleton/index"; // Using the skeleton we discussed
 import { Button } from "components/ui/button";
@@ -17,7 +17,7 @@ export default function FeedPage() {
             const url = new URL('/api/posts', window.location.origin);
             if (cursor) url.searchParams.set('cursor', cursor);
 
-            const res = await fetch(url,{ cache: 'no-store' });
+            const res = await fetch(url, { cache: 'no-store' });
             if (res.ok) {
                 const data = await res.json();
 
@@ -27,9 +27,9 @@ export default function FeedPage() {
                     title: p.title,
                     content: p.body,
                     author: { username: p.user_email },
-                    community: { 
-                        name: p.community_name, 
-                        href: `/r/${p.community_name}` 
+                    community: {
+                        name: p.community_name,
+                        href: `/r/${p.community_name}`
                     },
                     imageUrl: p.picture_link,
                     initialVoteState: p.user_vote === 1 ? 'up' : p.user_vote === -1 ? 'down' : null,
@@ -56,15 +56,15 @@ export default function FeedPage() {
     useEffect(() => {
         fetchFeed();
         const handlePostUpdate = () => {
-        console.log("Post updated elsewhere, refreshing Home feed...");
-        fetchFeed(); 
-    };
+            console.log("Post updated elsewhere, refreshing Home feed...");
+            fetchFeed();
+        };
 
-    window.addEventListener('post-updated', handlePostUpdate);
-    
-    return () => {
-      window.removeEventListener('post-updated', handlePostUpdate);
-    };
+        window.addEventListener('post-updated', handlePostUpdate);
+
+        return () => {
+            window.removeEventListener('post-updated', handlePostUpdate);
+        };
     }, []);
 
     const handleLoadMore = () => {
@@ -86,16 +86,16 @@ export default function FeedPage() {
     return (
         <div className="max-w-4xl mx-auto py-6 px-4">
             <h1 className="text-2xl font-bold mb-4">Home</h1>
-            
+
             {/* 4. Display the real list from DB */}
-            <FeedCard postList={posts} />
+            <FeedCard postList={posts} initialNextCursor={nextCursor} />
 
             {/* 5. Pagination Button */}
             {nextCursor && (
                 <div className="mt-8 flex justify-center">
-                    <Button 
-                        variant="outline" 
-                        onClick={handleLoadMore} 
+                    <Button
+                        variant="outline"
+                        onClick={handleLoadMore}
                         disabled={isFetchingMore}
                     >
                         {isFetchingMore ? "Loading more..." : "Load More"}
