@@ -23,6 +23,7 @@ import Link from "next/link";
 import { cn } from "@/utils/utils";
 import CommentForm from "@/components/comments/CommentForm";
 import CommentCard from "@/components/comments/CommentCard";
+import TimeAgo from "@/components/shared/TimeAgo";
 
 export default function PostDetailPage() {
     const params = useParams();
@@ -199,16 +200,6 @@ export default function PostDetailPage() {
         }
     }, [post, community]);
 
-    const formatTimeAgo = (dateString) => {
-        const date = new Date(dateString);
-        const now = new Date();
-        const seconds = Math.floor((now - date) / 1000);
-
-        if (seconds < 60) return 'just now';
-        if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-        if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-        return `${Math.floor(seconds / 86400)}d ago`;
-    };
 
     const handlePostVote = async (newVoteState) => {
         try {
@@ -462,7 +453,7 @@ export default function PostDetailPage() {
                                             <span>•</span>
                                             <span>Posted by u/{post.user_email || 'CurrentUser'}</span>
                                             <span>•</span>
-                                            <span>{formatTimeAgo(post.createdAt)}</span>
+                                            <TimeAgo timestamp={post.createdAt} />
                                         </div>
 
                                         <h1 className="text-2xl font-bold mb-3">{post.title}</h1>

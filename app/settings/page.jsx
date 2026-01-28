@@ -39,11 +39,18 @@ function SectionHeader({ title }) {
 }
 
 function SettingsContent() {
-    const session = getSession();
+    const [mounted, setMounted] = useState(false);
+    const [email, setEmail] = useState("");
     const searchParams = useSearchParams();
     const router = useRouter();
-    // Use session email or empty string if not logged in (though it should redirect usually)
-    const [email] = useState(session?.email || "");
+
+    useEffect(() => {
+        setMounted(true);
+        const session = getSession();
+        if (session?.email) {
+            setEmail(session.email);
+        }
+    }, []);
 
     const activeTab = searchParams.get("tab") || "account";
 

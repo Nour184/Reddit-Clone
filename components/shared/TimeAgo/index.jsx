@@ -1,4 +1,5 @@
-// components/shared/TimeAgo/index.jsx
+"use client";
+import { useState, useEffect } from "react";
 import { cn } from "@/utils/utils";
 
 /**
@@ -11,7 +12,13 @@ import { cn } from "@/utils/utils";
  * - timestamp: Date | string | number - The timestamp to format
  * - className: string - Additional CSS classes
  */
-export default function TimeAgo({ timestamp, className }) {
+export default function TimeAgo({ timestamp, className = "" }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const formatTimeAgo = (ts) => {
     if (!ts) return "just now";
 
@@ -58,9 +65,11 @@ export default function TimeAgo({ timestamp, className }) {
     return `${month} ${day}, ${year}`;
   };
 
+  const isoDate = timestamp ? new Date(timestamp).toISOString() : "";
+
   return (
-    <time className={cn("text-xs text-muted-foreground", className)} dateTime={new Date(timestamp).toISOString()}>
-      {formatTimeAgo(timestamp)}
+    <time className={cn("text-xs text-muted-foreground", className)} dateTime={isoDate}>
+      {mounted ? formatTimeAgo(timestamp) : "..."}
     </time>
   );
 }

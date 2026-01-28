@@ -12,12 +12,18 @@ import FeedCard from "components/shared/FeedCard/index";
 
 export default function UserProfilePage() {
     const params = useParams();
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     // Decode URI component because params.username might be "Ramy%40gmail.com" while session is "Ramy@gmail.com"
-    const routerUsername = decodeURIComponent(params.username);
-    const session = getSession();
+    const routerUsername = params.username ? decodeURIComponent(params.username) : "";
+    const session = mounted ? getSession() : null;
 
     // In a real app, fetch user data by username. Here we mock or use session if matches.
-    const isOwnProfile = session?.username === routerUsername;
+    const isOwnProfile = mounted && session?.username === routerUsername;
 
     const user = isOwnProfile ? session : {
         username: routerUsername,

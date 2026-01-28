@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "components/ui/button";
 import { Input } from "components/ui/input";
@@ -26,6 +26,12 @@ export default function PostActions({ post }) {
     const [editTitle, setEditTitle] = useState(post.title || "");
     const [editBody, setEditBody] = useState(post.content || post.body || "");
 
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     const session = getSession();
     const currentUserEmail = session?.user?.email;
 
@@ -35,7 +41,7 @@ export default function PostActions({ post }) {
         (post.author && post.author.toLowerCase() === currentUserEmail.split('@')[0].toLowerCase())
     );
 
-    if (!isAuthor) return null;
+    if (!mounted || !isAuthor) return null;
 
     const handleDelete = async () => {
         if (!window.confirm("Are you sure you want to delete this post? This cannot be undone.")) {
