@@ -226,7 +226,7 @@ export default function CommunityPage() {
 
             {/* Community Header */}
             <div className="max-w-[1100px] mx-auto px-4 lg:pl-0">
-                <div className="relative -mt-12 md:-mt-16">
+                <div className="relative -mt-12 md:-mt-16 ml-10">
                     {/* Community Icon */}
                     <div className="flex items-end gap-4 mb-4">
                         <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-white dark:bg-gray-800 border-4 border-background flex items-center justify-center overflow-hidden">
@@ -243,12 +243,13 @@ export default function CommunityPage() {
                                 </span>
                             )}
                         </div>
-                        <div className="flex-1 pb-2">
-                            <h1 className="text-2xl md:text-3xl font-bold mb-0.5 px-0.5">r/{communityData.name}</h1>
-                            <p className="text-sm text-muted-foreground font-medium px-1">r/{communityName}</p>
+                        <div className="flex-1 pb-2 mt-16">
+                            <p className="text-3xl font-bold px-1 mt-2">
+                                r/{communityName}
+                            </p>
                         </div>
                         <div className="pb-4">
-                            <SubredditHeader communityId={communityName} owner={communityData?.community_owner} />
+                        <SubredditHeader communityId={communityName} owner={communityData?.community_owner} />
                         </div>
                     </div>
                 </div>
