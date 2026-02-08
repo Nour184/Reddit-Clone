@@ -362,22 +362,21 @@ export default function PostDetailPage() { //msh hnaaa dh l single post detail
     return (
         <div className="min-h-screen bg-background">
             {/* Main Centered Container */}
-            <div className="max-w-[1100px] mx-auto px-4 py-6 relative">
-                {/* Back Button - Constrained to 740px alignment */}
-                <div className="max-w-[740px] mx-auto mb-4">
-                    <Button
-                        variant="ghost"
-                        onClick={() => router.back()}
-                        className="gap-2 px-0 hover:bg-transparent"
-                    >
-                        <ArrowLeft className="w-4 h-4" />
-                        Back
-                    </Button>
-                </div>
-
-                <div className="relative">
+            <div className="max-w-[1100px] mx-auto px-4 py-6">
+                <div className="flex flex-col xl:flex-row xl:items-start gap-6">
                     {/* Main Content - Centered 740px */}
-                    <div className="max-w-[740px] mx-auto">
+                    <div className="flex-1 max-w-[740px] xl:max-w-none mx-auto xl:mx-0">
+                        {/* Back Button */}
+                        <div className="mb-4">
+                            <Button
+                                variant="ghost"
+                                onClick={() => router.back()}
+                                className="gap-2 px-0 hover:bg-transparent"
+                            >
+                                <ArrowLeft className="w-4 h-4" />
+                                Back
+                            </Button>
+                        </div>
                         <Card className="overflow-hidden">
                             {/* Post Header */}
                             <div className="p-4 border-b">
@@ -524,8 +523,8 @@ export default function PostDetailPage() { //msh hnaaa dh l single post detail
                         </Card>
                     </div>
 
-                    {/* Right Sidebar - Positioned relative to the 1100px container */}
-                    <aside className="hidden xl:block absolute top-0 left-[calc(50%+390px)] w-80">
+                    {/* Right Sidebar */}
+                    <aside className="hidden xl:block w-80 flex-shrink-0">
                         {communityData && (
                             <Card className="p-4 sticky top-4">
                                 <div className="flex justify-between items-center mb-3">
