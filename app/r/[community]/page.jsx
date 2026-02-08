@@ -213,9 +213,9 @@ export default function CommunityPage() {
     if (!communityData) return <div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>;
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-background -mt-16">
             {/* Community Banner */}
-            <div className={`relative w-full h-32 md:h-48 bg-gradient-to-r ${communityData.color || "from-blue-500 to-blue-600"}`}>
+            <div className={`relative w-full h-32 md:h-48 bg-gradient-to-r ${communityData.color || "from-blue-500 to-blue-600"} lg:-ml-[270px] lg:w-[calc(100%+270px)]`}>
                 {communityData.banner && (
                     <div
                         className="absolute inset-0 bg-cover bg-center"
@@ -225,7 +225,7 @@ export default function CommunityPage() {
             </div>
 
             {/* Community Header */}
-            <div className="max-w-[1100px] mx-auto px-4">
+            <div className="max-w-[1100px] mx-auto px-4 lg:pl-0">
                 <div className="relative -mt-12 md:-mt-16">
                     {/* Community Icon */}
                     <div className="flex items-end gap-4 mb-4">
@@ -255,10 +255,10 @@ export default function CommunityPage() {
             </div>
 
             {/* Main Content Area */}
-            <div className="max-w-[1100px] mx-auto px-4 mt-6 relative">
-                <div className="relative">
+            <div className="max-w-[1100px] mx-auto px-4 mt-6">
+                <div className="flex flex-col xl:flex-row xl:items-start gap-6">
                     {/* Posts Feed - Centered 740px */}
-                    <div className="max-w-[740px] mx-auto">
+                    <div className="flex-1 max-w-[740px] xl:max-w-none mx-auto xl:mx-0">
                         {/* Sort Tabs */}
                         <Card className="p-2 mb-4">
                             <div className="flex gap-1 overflow-x-auto">
@@ -289,8 +289,8 @@ export default function CommunityPage() {
                         )}
                     </div>
 
-                    {/* Right Sidebar - Community Info - Absolute Positioned */}
-                    <aside className="hidden xl:block absolute top-0 left-[calc(50%+390px)] w-80">
+                    {/* Right Sidebar - Community Info */}
+                    <aside className="hidden xl:block w-80 flex-shrink-0">
                         <Card className="p-4">
                             <div className="flex justify-between items-center mb-3">
                                 <h2 className="font-bold text-sm text-muted-foreground uppercase tracking-wider">About Community</h2>
