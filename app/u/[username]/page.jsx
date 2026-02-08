@@ -157,7 +157,7 @@ export default function UserProfilePage() {
                                     <div className="text-xs font-bold text-muted-foreground uppercase">Cake day</div>
                                     <div className="text-sm font-medium flex items-center gap-1">
                                         <Cake className="w-3 h-3 text-blue-500" fill="currentColor" />
-                                        Oct 24, 2023
+                                        {user.created || "Jan 1, 2000"}
                                     </div>
                                 </div>
                             </div>

@@ -403,7 +403,7 @@ export default function PostDetailPage() { //msh hnaaa dh l single post detail
                                         href={`/u/${post.username || post.user_email?.split('@')[0] || '[deleted]'}`}
                                         className="font-medium hover:underline"
                                     >
-                                        u/{post.username || post.user_email?.split('@')[0] || '[deleted]'}
+                                        u/{post.username || '[deleted]'}
                                     </Link>
                                     <span>•</span>
                                     <span>{formatTimeAgo(post.createdAt)}</span>
@@ -523,7 +523,7 @@ export default function PostDetailPage() { //msh hnaaa dh l single post detail
                                             <CommentCard
                                                 key={comment.comment_id}
                                                 id={comment.comment_id}
-                                                author={{ username: comment.username || comment.user_email?.split('@')[0] || '[deleted]' }}
+                                                author={{ username: comment.username || '[deleted]' }}
                                                 content={comment.body}
                                                 createdAt={comment.created_on}
                                                 votes={Number(comment.votes) || 0}
