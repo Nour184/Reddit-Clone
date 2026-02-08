@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { errorHandlerMiddleware } from '@services/middlewareHandlers/errorHandlerMiddleware';
 import { GetPost, UpdatePost, DeletePost,GetPostMediaInfo,
          SavePostMediaInfo, ClearPostMediaInfo} from '@utils/crud/post_crud';
+import { GetUser } from '@utils/crud/user_crud';
 import { postValidator } from '@utils/validators';
 import cloudinary from '@services/cloudinary';
 import { auth } from '@services/auth';
@@ -27,7 +28,25 @@ async function get_Post_Handler (request,context){
     if (!searchedPost) {
         return NextResponse.json({ message: "No Post with this ID found!!" }, { status: 404 });
     }
-    return NextResponse.json(searchedPost);//post found     
+
+    // Fetch username for the post author
+    let username = null;
+    if (searchedPost.user_email) {
+        try {
+            const user = await GetUser(searchedPost.user_email);
+            username = user?.username || null;
+        } catch (error) {
+            console.error("Error fetching username for post:", error);
+        }
+    }
+
+    // Add username to the post
+    const enrichedPost = {
+        ...searchedPost,
+        username: username
+    };
+
+    return NextResponse.json(enrichedPost);//post found     
 }
 
 //helper to upload to cloudinary

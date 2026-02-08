@@ -6,6 +6,7 @@ import {CreatePost ,GetCommunityPosts,
     GetPostsCreatedByUser, GetPublicFeedPosts,
     GetPersonalizedFeedForLoggedInUser , SavePostMediaInfo,
     ClearPostMediaInfo,GetBatchUserVotes} from '@utils/crud/post_crud';
+import { GetUser } from '@utils/crud/user_crud';
 import cloudinary from '@services/cloudinary';
 
 import { auth } from '@services/auth';
@@ -77,17 +78,40 @@ import { auth } from '@services/auth';
             console.error("Failed to enrich feed with votes", error);
         }
     }
+
+    // Enrich posts with usernames
+    const uniqueEmails = [...new Set(posts.map(p => p.user_email).filter(Boolean))];
+    const usernameMap = {};
+    
+    await Promise.all(
+        uniqueEmails.map(async (email) => {
+            try {
+                const user = await GetUser(email);
+                if (user) {
+                    usernameMap[email] = user.username;
+                }
+            } catch (error) {
+                console.error(`Error fetching username for ${email}:`, error);
+            }
+        })
+    );
+
+    // Add usernames to posts
+    const enrichedPosts = posts.map(post => ({
+        ...post,
+        username: usernameMap[post.user_email] || null
+    }));
   
-  if (posts && posts.length > limit) {
-    posts.pop(); // Remove the 9th item (it was just for checking)
-    const lastPost = posts[posts.length - 1];       
+  if (enrichedPosts && enrichedPosts.length > limit) {
+    enrichedPosts.pop(); // Remove the 9th item (it was just for checking)
+    const lastPost = enrichedPosts[enrichedPosts.length - 1];       
     nextCursor = lastPost ? lastPost.created_on : null; 
     } else {
       nextCursor = null;
     }
     //return posts fetched
     return NextResponse.json({
-        FeedData: posts,
+        FeedData: enrichedPosts,
         meta: {
         nextCursor: nextCursor
         }

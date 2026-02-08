@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { errorHandlerMiddleware } from '@services/middlewareHandlers/errorHandlerMiddleware';
 import { CreateComment,GetPostComments, DeleteAllPostComments } from '@utils/crud/comment_crud';
 import { GetPost } from '@utils/crud/post_crud';
+import { GetUser } from '@utils/crud/user_crud';
 import { commentsValidator } from '@utils/validators';
 import { auth } from '@services/auth';
 
@@ -22,7 +23,26 @@ import { auth } from '@services/auth';
     comments =  await GetPostComments(numericId);
     if(!(comments.length)){return NextResponse.json({ message: "No comments for this post found!!" }, { status: 404 });}//no comments found
 
-    return NextResponse.json(comments);
+    // Enrich comments with usernames
+    const enrichedComments = await Promise.all(
+        comments.map(async (comment) => {
+            let username = null;
+            if (comment.user_email) {
+                try {
+                    const user = await GetUser(comment.user_email);
+                    username = user?.username || null;
+                } catch (error) {
+                    console.error(`Error fetching username for comment ${comment.comment_id}:`, error);
+                }
+            }
+            return {
+                ...comment,
+                username: username
+            };
+        })
+    );
+
+    return NextResponse.json(enrichedComments);
 }
 
 

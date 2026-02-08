@@ -76,7 +76,8 @@ export default function PostDetailPage() { //msh hnaaa dh l single post detail
                     title: data.title,
                     content: data.body,
                     user_email: data.user_email, // Required for permission checks
-                    author: data.user_email?.split('@')[0] || 'user', // Extract username from email
+                    username: data.username || data.user_email?.split('@')[0] || '[deleted]',
+                    author: data.username || data.user_email?.split('@')[0] || '[deleted]',
                     community: { name: data.community_name },
                     upvotes: currentVotes,
                     userVoteStatus: currentUserStatus,
@@ -133,12 +134,21 @@ export default function PostDetailPage() { //msh hnaaa dh l single post detail
                             // Accessing 'VoteCount' directly as it is now returned from your SQL BIGINT sum
                             const count = Number(voteData.VoteCount) || 0;
                             const status = voteData.userVote || null; //get user status on that vote
-                            return { ...comment, votes: count, userVoteStatus: status };
+                            return { 
+                                ...comment, 
+                                votes: count, 
+                                userVoteStatus: status,
+                                username: comment.username || comment.user_email?.split('@')[0] || '[deleted]'
+                            };
                         }
                     } catch (error) {
                         console.error(`Error fetching votes for comment ${comment.comment_id}:`, error);
                     }
-                    return { ...comment, votes: 0 };
+                    return { 
+                        ...comment, 
+                        votes: 0,
+                        username: comment.username || comment.user_email?.split('@')[0] || '[deleted]'
+                    };
                 })
             );
             
@@ -388,7 +398,13 @@ export default function PostDetailPage() { //msh hnaaa dh l single post detail
                                         r/{communityName}
                                     </Link>
                                     <span>•</span>
-                                    <span>Posted by u/{post.user_email || 'CurrentUser'}</span>
+                                    <span>Posted by </span>
+                                    <Link
+                                        href={`/u/${post.username || post.user_email?.split('@')[0] || '[deleted]'}`}
+                                        className="font-medium hover:underline"
+                                    >
+                                        u/{post.username || post.user_email?.split('@')[0] || '[deleted]'}
+                                    </Link>
                                     <span>•</span>
                                     <span>{formatTimeAgo(post.createdAt)}</span>
                                 </div>
@@ -507,7 +523,7 @@ export default function PostDetailPage() { //msh hnaaa dh l single post detail
                                             <CommentCard
                                                 key={comment.comment_id}
                                                 id={comment.comment_id}
-                                                author={{ username: comment.user_email }} // Assuming email as username for now
+                                                author={{ username: comment.username || comment.user_email?.split('@')[0] || '[deleted]' }}
                                                 content={comment.body}
                                                 createdAt={comment.created_on}
                                                 votes={Number(comment.votes) || 0}
