@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Settings, Share2, Plus, MoreHorizontal, Cake, MessageSquare, Award, Flame } from "lucide-react";
+import { Settings, Plus, Cake, MessageSquare, Award, Flame } from "lucide-react";
 import { Button } from "components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "components/ui/avatar";
@@ -12,50 +12,86 @@ import FeedCard from "components/shared/FeedCard/index";
 
 export default function UserProfilePage() {
     const params = useParams();
-    // Decode URI component because params.username might be "Ramy%40gmail.com" while session is "Ramy@gmail.com"
     const routerUsername = decodeURIComponent(params.username);
     const session = getSession();
 
-    // In a real app, fetch user data by username. Here we mock or use session if matches.
+    // Check if looking at own profile
     const isOwnProfile = session?.username === routerUsername;
 
-    const user = isOwnProfile ? session : {
-        username: routerUsername,
-        karma: 1234,
-        avatar: "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_1.png",
-        created: "Oct 24, 2023"
-    };
-
+    // State for data ---
+    const [profile, setProfile] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [userPosts, setUserPosts] = useState([]);
 
-    // Posts fetching is now handled by FeedCard with myPosts prop
+    // Fetch User Data ---
     useEffect(() => {
-        // We still check localStorage for old posts if any, but FeedCard handles the live ones
-        setUserPosts([]);
+        const fetchUser = async () => {
+            setIsLoading(true);
+            try {
+                // If it's your own profile, you might prefer using session data for instant load,
+                // but fetching ensures you see what others see (syncs 'karma', etc).
+                const response = await fetch(`/api/profile/${routerUsername}`, {
+                    cache: 'no-store'
+                });
+
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        setError("User not found");
+                    } else {
+                        throw new Error("Failed to load profile");
+                    }
+                    return;
+                }
+
+                const data = await response.json();
+                setProfile(data);
+            } catch (err) {
+                console.error(err);
+                setError("Failed to load profile");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        if (routerUsername) {
+            fetchUser();
+        }
     }, [routerUsername]);
+
+    // --- Helper: Format Date ---
+    const formatDate = (dateString) => {
+        if (!dateString) return "Unknown";
+        return new Date(dateString).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+        });
+    };
 
     const handleDeleteAccount = async () => {
         if (!window.confirm("Are you sure you want to delete your account? This cannot be undone.")) {
             return;
         }
-
         try {
-            const res = await fetch("/api/profile", {
-                method: "DELETE",
-            });
-
+            const res = await fetch("/api/profile", { method: "DELETE" });
             if (res.ok) {
-                // Clear session and redirect hard to home
-                removeSession(); // Ensure session is gone
+                removeSession();
                 window.location.href = "/";
             } else {
-                alert("Failed to delete account. Please try again.");
+                alert("Failed to delete account.");
             }
         } catch (error) {
             console.error("Delete error:", error);
-            alert("An error occurred. Please try again.");
         }
     };
+
+    // --- Render Loading / Error States ---
+    if (isLoading) return <div className="flex justify-center p-10">Loading profile...</div>;
+    if (error || !profile) return <div className="flex justify-center p-10 text-muted-foreground">{error || "User not found"}</div>;
+
+    // We use 'profile' from API, but fallback to session for instant feedback if needed
+    const displayUser = profile;
 
     return (
         <div className="container max-w-[1200px] mx-auto py-4">
@@ -63,13 +99,8 @@ export default function UserProfilePage() {
 
                 {/* Main Content Feed */}
                 <div className="flex-1 w-full min-w-0">
+                    <div className="hidden md:flex items-end gap-4 mb-4"></div>
 
-                    {/* Header (Simplified for Mobile/Desktop Hybrid) */}
-                    <div className="hidden md:flex items-end gap-4 mb-4">
-                        {/* Avatar is in Sidebar on desktop, but let's put a header here too like new reddit */}
-                    </div>
-
-                    {/* Tabs Navigation */}
                     <Tabs defaultValue="overview" className="w-full">
                         <div className="border-b mb-4 overflow-x-auto">
                             <TabsList className="bg-transparent h-auto p-0 w-full justify-start space-x-2">
@@ -85,34 +116,36 @@ export default function UserProfilePage() {
                             </TabsList>
                         </div>
 
-                        {/* Content Area */}
                         <TabsContent value="overview">
-                            {isOwnProfile ? <FeedCard postList={userPosts} myPosts={true} /> : <EmptyState user={user} />}
+                            {isOwnProfile ? <FeedCard postList={userPosts} myPosts={true} /> : <EmptyState user={displayUser} />}
                         </TabsContent>
                         <TabsContent value="posts">
-                            {isOwnProfile ? <FeedCard postList={userPosts} myPosts={true} /> : <EmptyState user={user} type="posts" />}
+                            {isOwnProfile ? <FeedCard postList={userPosts} myPosts={true} /> : <EmptyState user={displayUser} type="posts" />}
                         </TabsContent>
-                        <TabsContent value="comments"><EmptyState user={user} type="comments" /></TabsContent>
+                        <TabsContent value="comments"><EmptyState user={displayUser} type="comments" /></TabsContent>
                     </Tabs>
                 </div>
 
                 {/* Right Sidebar - Profile Card */}
                 <div className="hidden lg:block w-[340px] flex-shrink-0">
                     <div className="bg-card border rounded-lg overflow-hidden sticky top-20">
-                        {/* Blue Banner */}
                         <div className="h-24 bg-[#33a8ff] relative">
-                            {/* Add Image Button (Mock) */}
                             {isOwnProfile && <button className="absolute right-2 bottom-2 bg-black/20 hover:bg-black/30 p-2 rounded-full text-white"><Plus className="w-4 h-4" /></button>}
                         </div>
 
-                        {/* Content */}
                         <div className="px-3 pb-4 relative">
-                            {/* Avatar */}
+                            {/* Avatar Section */}
                             <div className="absolute -top-24 left-4">
                                 <div className="p-1.5 bg-card rounded-md inline-block">
                                     <Avatar className="w-20 h-20 rounded-md border border-border">
-                                        <AvatarImage src={user.avatar} className="object-cover" />
-                                        <AvatarFallback className="rounded-md text-2xl">{user.username[0].toUpperCase()}</AvatarFallback>
+                                        {/* Updated to use profile_picture_link from DB */}
+                                        <AvatarImage
+                                            src={displayUser.profile_picture_link || "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_1.png"}
+                                            className="object-cover"
+                                        />
+                                        <AvatarFallback className="rounded-md text-2xl">
+                                            {displayUser.username?.[0]?.toUpperCase()}
+                                        </AvatarFallback>
                                     </Avatar>
                                 </div>
                             </div>
@@ -131,11 +164,10 @@ export default function UserProfilePage() {
 
                             {/* User Info */}
                             <div className="mt-8 mb-4">
-                                <h1 className="text-xl font-bold truncate">{user.username}</h1>
-                                <p className="text-sm text-muted-foreground">u/{user.username}</p>
+                                <h1 className="text-xl font-bold truncate">{displayUser.username}</h1>
+                                <p className="text-sm text-muted-foreground">u/{displayUser.username}</p>
                             </div>
 
-                            {/* Action Button */}
                             <div className="mb-6">
                                 {!isOwnProfile && (
                                     <Button className="w-full rounded-full font-bold bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white" asChild>
@@ -144,25 +176,25 @@ export default function UserProfilePage() {
                                 )}
                             </div>
 
-                            {/* Stats Grid */}
                             <div className="grid grid-cols-2 gap-y-4 mb-6">
                                 <div>
                                     <div className="text-xs font-bold text-muted-foreground uppercase">Karma</div>
                                     <div className="text-sm font-medium flex items-center gap-1">
                                         <Flame className="w-3 h-3 text-red-500" fill="currentColor" />
-                                        {user.karma?.toLocaleString() || 1}
+                                        {/* Fallback to 0 if karma is null */}
+                                        {displayUser.karma?.toLocaleString() || 0}
                                     </div>
                                 </div>
                                 <div>
                                     <div className="text-xs font-bold text-muted-foreground uppercase">Cake day</div>
                                     <div className="text-sm font-medium flex items-center gap-1">
                                         <Cake className="w-3 h-3 text-blue-500" fill="currentColor" />
-                                        {user.created || "Jan 1, 2000"}
+                                        {/* Use helper function to format DB date */}
+                                        {formatDate(displayUser.created_on)}
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Achievements (Mock) */}
                             <div className="mb-6">
                                 <div className="text-xs font-bold text-muted-foreground uppercase mb-2">Achievements</div>
                                 <div className="flex gap-2">
@@ -172,7 +204,6 @@ export default function UserProfilePage() {
                                 </div>
                             </div>
 
-                            {/* Settings Link */}
                             {isOwnProfile && (
                                 <div className="space-y-4 pt-4 border-t">
                                     <div className="flex items-center justify-between">
@@ -181,26 +212,11 @@ export default function UserProfilePage() {
                                             <Link href="/settings?tab=profile">Edit</Link>
                                         </Button>
                                     </div>
-                                    <div className="flex items-center justify-between">
-                                        <div className="text-sm font-medium">Curate your profile</div>
-                                        <Button variant="ghost" size="sm" className="h-7 text-xs bg-muted/50 rounded-full hover:bg-muted" asChild>
-                                            <Link href="/settings?tab=profile">Update</Link>
+                                    <div className="flex justify-end mt-4">
+                                        <Button variant="destructive" size="sm" className="text-xs" onClick={handleDeleteAccount}>
+                                            Delete
                                         </Button>
                                     </div>
-                                </div>
-                            )}
-
-                            {/* More Options */}
-                            {isOwnProfile && (
-                                <div className="flex justify-end mt-4">
-                                    <Button
-                                        variant="destructive"
-                                        size="sm"
-                                        className="text-xs"
-                                        onClick={handleDeleteAccount}
-                                    >
-                                        Delete
-                                    </Button>
                                 </div>
                             )}
                         </div>
@@ -212,6 +228,7 @@ export default function UserProfilePage() {
 }
 
 function EmptyState({ user, type = "overview" }) {
+    if (!user) return null;
     return (
         <div className="flex flex-col items-center justify-center py-16 px-4 bg-background border rounded-lg text-center">
             <div className="bg-muted/30 p-4 rounded-full mb-4">
@@ -221,7 +238,6 @@ function EmptyState({ user, type = "overview" }) {
             <p className="text-muted-foreground max-w-sm mx-auto mb-6">
                 {type === "overview" ? "This user hasn't posted or commented yet." : `There are no ${type} in this account.`}
             </p>
-            {/* If own profile, prompt to engage */}
         </div>
     );
 }

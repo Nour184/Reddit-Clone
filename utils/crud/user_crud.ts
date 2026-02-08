@@ -38,6 +38,23 @@ export async function GetUser(email: string): Promise<User | null> {
 }
 
 /**
+ * Gets a user from the database given the user's username.
+ * If no user found, return null
+ *
+ * @param username - The user's username.
+ * @returns A promise of either the User object or null if not found.
+ */
+export async function GetUserByUsername(username: string): Promise<User | null> {
+    try {
+        const res = await pool.query('SELECT * FROM get_user_data_from_name($1)', [username]);
+        return res.rows[0] ?? null;
+    } catch (err) {
+        console.error('Error finding user:', err);
+        throw err;
+    }
+}
+
+/**
  * Sets the profile picture for a user given their email address.
  *
  * @param email - The user's email address.
