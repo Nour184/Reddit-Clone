@@ -19,14 +19,16 @@ import { auth } from '@services/auth';
     const session = await auth();
     const isLoggedIn = Boolean(session?.user);
     const userEmail = session?.user?.email;
-    
-    const url = new URL(request.url);
-    const communityName = url.searchParams.get('communityName');
-    const myPosts = url.searchParams.has('myPosts');
-    const cursor = url.searchParams.get('cursor');
+
+    const { searchParams } = request.nextUrl;
+
+    const communityName = searchParams.get('communityName');
+    const myPosts = searchParams.has('myPosts');
+    const cursor = searchParams.get('cursor');
+    const targetEmail = searchParams.get('Email'); // username for which get all the posts of
+
     let posts = []; //posts to be returned
     let nextCursor = null;//cursor to be returned from frontend
-
   
     //************************************validate pagination params********************************//
     let validCursor = cursor || null;
@@ -41,12 +43,16 @@ import { auth } from '@services/auth';
     if (communityName) {
         posts = await GetCommunityPosts(communityName, fetchLimit, validCursor);
     }
-    //fetch users made posts (requires user to be logged in)
+    //fetch users made posts
     else if (myPosts) {
-      if (!isLoggedIn) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-      posts = await GetPostsCreatedByUser(userEmail, fetchLimit, validCursor);
+        // If a username is provided, fetch by that. Otherwise, fallback to logged-in user
+        if (targetEmail) {
+            posts = await GetPostsCreatedByUser(targetEmail, fetchLimit, validCursor);
+        } else if (isLoggedIn) {
+            posts = await GetPostsCreatedByUser(userEmail, fetchLimit, validCursor);
+        } else {
+            return NextResponse.json({ error: "No user specified" }, { status: 400 });
+        }
     }
 
     else {
