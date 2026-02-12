@@ -114,7 +114,7 @@ export default function Sidebar() {
   const communitiesToShow = showAll ? communities : communities.slice(0, 5);
 
   return (
-    <aside className="hidden lg:block w-[270px] fixed left-0 top-14 h-[calc(100vh-3.5rem)] overflow-y-auto bg-background border-r border-border pt-4 pb-4">
+    <aside className="hidden lg:block w-[270px] fixed left-0 top-14 h-[calc(100vh-3.5rem)] overflow-y-auto bg-background border-r border-border pt-4 pb-4 z-40">
 
       {/* Home Section */}
       <div className="px-3 mb-2">

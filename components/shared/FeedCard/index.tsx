@@ -36,9 +36,10 @@ interface FeedCardProps {
     postList: Post[];
     communityName?: string;
     myPosts?: boolean;
+    targetEmail?: string;
 }
 
-export default function FeedCard({ postList, communityName, myPosts }: FeedCardProps) {
+export default function FeedCard({ postList, communityName, myPosts, targetEmail}: FeedCardProps) {
     const [posts, setPosts] = useState(postList);
     const [isLoading, setIsLoading] = useState(false);
     const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -65,7 +66,13 @@ export default function FeedCard({ postList, communityName, myPosts }: FeedCardP
             const url = new URL('/api/posts', window.location.origin);
             if (nextCursor) url.searchParams.set('cursor', nextCursor);
             if (communityName) url.searchParams.set('communityName', communityName);
-            if (myPosts) url.searchParams.set('myPosts', 'true');
+            if (myPosts) {
+                url.searchParams.set('myPosts', 'true');
+                // FIX: If we are in "myPosts" mode, we MUST provide the email
+                if (targetEmail) {
+                    url.searchParams.set('Email', targetEmail);
+                }
+            }
 
             const response = await fetch(url, { cache: 'no-store' });
 
@@ -92,8 +99,12 @@ export default function FeedCard({ postList, communityName, myPosts }: FeedCardP
                     href: `/r/${p.community_name}/post/${p.post_id}` 
                 }
             ));
-                
-                setPosts((prev) => [...prev, ...mappedPosts]);
+
+                setPosts((prev) => {
+                    const existingIds = new Set(prev.map(p => p.id));
+                    const newPosts = mappedPosts.filter(p => !existingIds.has(p.id));
+                    return [...prev, ...newPosts];
+                });
                 setNextCursor(data.meta.nextCursor);
                 setHasMore(!!data.meta.nextCursor);
             } else {

@@ -6,6 +6,7 @@ import {CreatePost ,GetCommunityPosts,
     GetPostsCreatedByUser, GetPublicFeedPosts,
     GetPersonalizedFeedForLoggedInUser , SavePostMediaInfo,
     ClearPostMediaInfo,GetBatchUserVotes} from '@utils/crud/post_crud';
+import { GetUser } from '@utils/crud/user_crud';
 import cloudinary from '@services/cloudinary';
 
 import { auth } from '@services/auth';
@@ -18,14 +19,16 @@ import { auth } from '@services/auth';
     const session = await auth();
     const isLoggedIn = Boolean(session?.user);
     const userEmail = session?.user?.email;
-    
-    const url = new URL(request.url);
-    const communityName = url.searchParams.get('communityName');
-    const myPosts = url.searchParams.has('myPosts');
-    const cursor = url.searchParams.get('cursor');
+
+    const { searchParams } = request.nextUrl;
+
+    const communityName = searchParams.get('communityName');
+    const myPosts = searchParams.has('myPosts');
+    const cursor = searchParams.get('cursor');
+    const targetEmail = searchParams.get('Email'); // username for which get all the posts of
+
     let posts = []; //posts to be returned
     let nextCursor = null;//cursor to be returned from frontend
-
   
     //************************************validate pagination params********************************//
     let validCursor = cursor || null;
@@ -40,12 +43,16 @@ import { auth } from '@services/auth';
     if (communityName) {
         posts = await GetCommunityPosts(communityName, fetchLimit, validCursor);
     }
-    //fetch users made posts (requires user to be logged in)
+    //fetch users made posts
     else if (myPosts) {
-      if (!isLoggedIn) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-      posts = await GetPostsCreatedByUser(userEmail, fetchLimit, validCursor);
+        // If a username is provided, fetch by that. Otherwise, fallback to logged-in user
+        if (targetEmail) {
+            posts = await GetPostsCreatedByUser(targetEmail, fetchLimit, validCursor);
+        } else if (isLoggedIn) {
+            posts = await GetPostsCreatedByUser(userEmail, fetchLimit, validCursor);
+        } else {
+            return NextResponse.json({ error: "No user specified" }, { status: 400 });
+        }
     }
 
     else {
@@ -77,17 +84,40 @@ import { auth } from '@services/auth';
             console.error("Failed to enrich feed with votes", error);
         }
     }
+
+    // Enrich posts with usernames
+    const uniqueEmails = [...new Set(posts.map(p => p.user_email).filter(Boolean))];
+    const usernameMap = {};
+    
+    await Promise.all(
+        uniqueEmails.map(async (email) => {
+            try {
+                const user = await GetUser(email);
+                if (user) {
+                    usernameMap[email] = user.username;
+                }
+            } catch (error) {
+                console.error(`Error fetching username for ${email}:`, error);
+            }
+        })
+    );
+
+    // Add usernames to posts
+    const enrichedPosts = posts.map(post => ({
+        ...post,
+        username: usernameMap[post.user_email] || null
+    }));
   
-  if (posts && posts.length > limit) {
-    posts.pop(); // Remove the 9th item (it was just for checking)
-    const lastPost = posts[posts.length - 1];       
+  if (enrichedPosts && enrichedPosts.length > limit) {
+    enrichedPosts.pop(); // Remove the 9th item (it was just for checking)
+    const lastPost = enrichedPosts[enrichedPosts.length - 1];       
     nextCursor = lastPost ? lastPost.created_on : null; 
     } else {
       nextCursor = null;
     }
     //return posts fetched
     return NextResponse.json({
-        FeedData: posts,
+        FeedData: enrichedPosts,
         meta: {
         nextCursor: nextCursor
         }

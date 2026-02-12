@@ -161,6 +161,19 @@ export default function PostCard({
                 className="text-foreground font-semibold hover:underline"
               />
             )}
+            {author?.username && (
+              <>
+                <span>·</span>
+                <span>by </span>
+                <Link
+                  href={`/u/${author.username}`}
+                  className="font-medium hover:underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  u/{author.username}
+                </Link>
+              </>
+            )}
             {createdAt && (
               <>
                 <span>·</span>

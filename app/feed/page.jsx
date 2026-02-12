@@ -26,7 +26,7 @@ export default function FeedPage() {
                     id: p.post_id,
                     title: p.title,
                     content: p.body,
-                    author: { username: p.user_email },
+                    author: { username: p.username || p.user_email?.split('@')[0] || '[deleted]' },
                     community: { 
                         name: p.community_name, 
                         href: `/r/${p.community_name}` 

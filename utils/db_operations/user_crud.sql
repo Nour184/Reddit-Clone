@@ -35,6 +35,26 @@ $$ LANGUAGE plpgsql;
 
 
 /*
+Gets a user given a username
+ */
+CREATE OR REPLACE FUNCTION get_user_data_from_name(p_name TEXT)
+RETURNS TABLE (
+    email TEXT,
+    username TEXT,
+    profile_picture_link TEXT,
+    about_me TEXT,
+    created_on TIMESTAMP
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT u.email, u.username, u.profile_picture_link, u.about_me, u.created_on
+    FROM users u
+    WHERE u.username = p_name;
+END;
+$$ LANGUAGE plpgsql;
+
+
+/*
 Gets the user whose email is equal to p_email
 Changes that user's profile picture
  */
